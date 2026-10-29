@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#243e35">
+  <meta name="description" content="记录每一次上墙。个人绳索攀岩日志，数据保存在当前设备。">
+  <title>岩记 · Climbing Log</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar"><a class="brand" href="#logs" aria-label="岩记首页"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M3 29 15 6l7 13 4-7 8 17H3Z"/><path d="m11 14 4 5 4-5M22 19l4 5 3-3"/></svg><span>岩记<small>CLIMBING LOG</small></span></a><span class="local-label"><i></i>本机记录</span></header>
+    <main id="main"></main>
+    <nav class="bottom-nav" aria-label="主要导航"><a href="#logs" data-nav="logs"><span class="nav-icon">▤</span>日志</a><a href="#projects" data-nav="projects"><span class="nav-icon">◎</span>Project</a><a href="#settings" data-nav="settings"><span class="nav-icon">≡</span>数据</a></nav>
+  </div>
+  <dialog id="editor" aria-labelledby="editor-title"><form id="log-form">
+    <header class="dialog-head"><div><span class="eyebrow">ONE CLIMB AT A TIME</span><h2 id="editor-title">记录一次攀爬</h2></div><button type="button" class="icon-button" data-action="close-editor" aria-label="关闭">×</button></header>
+    <div class="form-body">
+      <label>攀爬日期<input name="date" type="date" required></label>
+      <div id="route-picker-wrap"><label>选择已有线路<select name="routeId"><option value="">新建一条线路</option></select></label><p class="hint">同一线路的尝试会累计。修改线路资料会同步到其全部日志；换线后请新建线路。</p></div>
+      <fieldset id="route-fields"><legend>线路信息</legend>
+        <label>攀爬场景<select name="scene" required><option value="gym">岩馆</option><option value="outdoor">野外</option></select></label>
+        <label><span id="place-label">岩馆名称</span><input name="place" list="places" required maxlength="100" placeholder="在哪里攀爬？" autocomplete="off"></label><datalist id="places"></datalist>
+        <label id="area-label" hidden>岩区<input name="area" maxlength="100" placeholder="可选，例如：南壁"></label>
+        <label>线路难度<select name="grade" required></select></label>
+        <label>线路特征<input name="feature" maxlength="150" placeholder="例如：大碗造型、右侧屋檐"></label>
+        <fieldset class="color-field"><legend>线路颜色 <span class="optional">选填，再点一次取消</span></legend><div id="colors" class="colors"></div><input type="hidden" name="color"></fieldset>
+        <details id="route-extras"><summary>照片、长度与定线员</summary>
+          <label>线路长度 <span class="optional">米</span><input name="length" type="number" min="0.1" max="10000" step="0.1" inputmode="decimal" placeholder="例如：15"></label>
+          <label id="setter-label">定线员<input name="setter" list="setters" maxlength="100" placeholder="选填"></label><datalist id="setters"></datalist>
+          <label class="photo-upload">线路照片<input name="photos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple><span class="hint">可拍照或从相册选择，最多 4 张，保存时压缩。</span></label>
+          <div id="photo-preview" class="photo-preview"></div>
+        </details>
+      </fieldset>
+      <fieldset><legend>这次攀爬</legend>
+        <label>攀爬方式<select name="method" required><option value="lead">先锋</option><option value="toprope">顶绳</option><option value="auto">自动保护器</option></select></label>
+        <fieldset class="result-field"><legend>结束状态</legend><div class="segmented"><label><input type="radio" name="result" value="send" required><span>Send 成功</span></label><label><input type="radio" name="result" value="attempt" required><span>Attempt 尝试</span></label></div><p class="hint">无坠落、无挂绳休息地完成才算 Send。</p></fieldset>
+        <label id="style-label" hidden>完攀类型<select name="style"></select><span class="hint" id="style-hint"></span></label>
+        <label>线路体感 <span class="optional">这次爬起来有多难</span><select name="feel"><option value="">未记录</option><option>简单</option><option>中等</option><option>偏难</option><option>很硬</option></select></label>
+        <details id="log-extras"><summary>保护员与备注</summary><label id="belayer-label">保护员<input name="belayer" list="belayers" maxlength="100" placeholder="选填"></label><datalist id="belayers"></datalist><label>备注<textarea name="notes" rows="3" maxlength="5000" placeholder="难点、动作，以及下次想试的调整……"></textarea></label></details>
+      </fieldset>
+      <fieldset id="project-fields"><legend>Project <span class="optional">攻克目标</span></legend><label class="check-label"><input name="isProject" type="checkbox">将这条线路设为 Project</label><div id="project-options" hidden><label>目标攀爬方式<select name="target"><option value="lead">先锋</option><option value="toprope">顶绳</option><option value="auto">自动保护器</option></select></label><label>状态<select name="projectStatus"><option value="active">进行中</option><option value="complete">已完成</option><option value="stopped">已停止</option></select></label><p class="hint">记录目标方式的 Send 后自动完成，也可以手动调整。</p></div></fieldset>
+      <p id="form-error" class="error" role="alert"></p>
+    </div>
+    <footer class="dialog-foot"><button type="submit" class="primary" id="save-log">保存记录</button></footer>
+  </form></dialog>
+  <dialog id="detail" aria-labelledby="detail-title"></dialog>
+  <dialog id="confirm-dialog" aria-labelledby="confirm-title"><div class="confirm-body"><h2 id="confirm-title"></h2><p id="confirm-text"></p><div class="button-row"><button id="confirm-cancel" type="button" class="secondary">取消</button><button id="confirm-ok" type="button" class="primary">确认</button></div></div></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
