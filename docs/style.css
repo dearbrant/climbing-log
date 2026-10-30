@@ -14,8 +14,7 @@
 .home .date-group{margin-bottom:16px}
 .home .date-group h2{margin:0}
 .home .date-row{display:flex;align-items:center;gap:8px;min-height:56px;padding:10px 0;color:#000;font-family:"Google Sans Flex",sans-serif;font-size:24px;font-weight:800;line-height:36px}
-.home .date-row .weekday,.home .date-row .count{color:#d5d5d5;font-weight:800}
-.home .date-row .count{margin-left:auto}
+.home .date-row .weekday{color:#d5d5d5;font-weight:800}
 .home .cards{gap:8px}
 .home .climb-card{padding:16px;border-radius:24px}
 .home .card-grade{font-size:28px;line-height:36px;margin-bottom:12px}
