@@ -16,7 +16,6 @@ const gyms = ['Camp4 SLT', 'Mellow', 'SuperBox HLG', 'SuperBox CSS', 'DingShi', 
 const results = { onsight: 'Onsight', flash: 'Flash', redpoint: 'Redpoint', repeat: 'Repeat', attempt: 'Attempt' };
 const feelLabel = { 简单: 'Easy', 中等: 'Moderate', 偏难: 'Hard', 很硬: 'Very Hard' };
 let state = { routes: [], logs: [] };
-let openDate = null;
 let returnTo = '#home';
 let initialFormData = null;
 let toastTimer;
@@ -35,8 +34,7 @@ function renderHome() {
   const grouped = new Map();
   for (const log of state.logs) if (routeFor(log)) { if (!grouped.has(log.date)) grouped.set(log.date, []); grouped.get(log.date).push(log); }
   const dates = [...grouped.keys()].sort((a, b) => b.localeCompare(a));
-  if (openDate === null || (openDate && !grouped.has(openDate))) openDate = dates[0] || null;
-  app.innerHTML = `<div class="app home${dates.length ? '' : ' home-empty'}"><header class="screen-head"><h1>CLIMBING<br>LOG</h1><button class="home-settings" data-action="navigate" data-to="#sync" aria-label="Data Sync">${icon('setting')}</button></header>${dates.length ? dates.map((date, index) => `<section class="date-group"><h2><button class="date-toggle" data-action="toggle-date" data-date="${date}" aria-expanded="${date === openDate}" aria-controls="day-${index}"><span>${dateLabel(date)}</span><span class="weekday">${weekday(date)}</span><span class="count">${grouped.get(date).length}</span></button></h2><div class="cards" id="day-${index}" ${date === openDate ? '' : 'hidden'}>${latest(grouped.get(date)).map(log => card(log)).join('')}</div></section>`).join('') : '<img class="home-empty-art" src="./icons/ic_empty.svg" alt="">'}<button class="fab" data-action="navigate" data-to="#new" aria-label="新增攀爬记录">${icon('add')}</button></div>`;
+  app.innerHTML = `<div class="app home${dates.length ? '' : ' home-empty'}"><header class="screen-head"><h1>CLIMBING<br>LOG</h1><button class="home-settings" data-action="navigate" data-to="#sync" aria-label="Data Sync">${icon('setting')}</button></header>${dates.length ? dates.map(date => `<section class="date-group"><h2 class="date-row"><span>${dateLabel(date)}</span><span class="weekday">${weekday(date)}</span><span class="count">${grouped.get(date).length}</span></h2><div class="cards">${latest(grouped.get(date)).map(log => card(log)).join('')}</div></section>`).join('') : '<img class="home-empty-art" src="./icons/ic_empty.svg" alt="">'}<button class="fab" data-action="navigate" data-to="#new" aria-label="新增攀爬记录">${icon('add')}</button></div>`;
 }
 const option = (value, label, selected) => `<option value="${escapeHtml(value)}" ${value === selected ? 'selected' : ''}>${escapeHtml(label)}</option>`;
 const selectField = (name, label, iconName, choices, selected) => `<label class="field"><b class="field-icon" aria-hidden="true">${icon(iconName)}</b><select name="${name}" aria-label="${label}">${choices.map(([value, text]) => option(value, text, selected)).join('')}</select></label>`;
@@ -98,7 +96,7 @@ async function importBackup(input) {
   try {
     const backup = validateBackup(JSON.parse(await file.text()));
     const current = await readAll(), merged = mergeBackup(current, backup);
-    await write(merged); state = await readAll(); openDate = null;
+    await write(merged); state = await readAll();
     const added = merged.logs.length - current.logs.length;
     showToast(added ? `${added} climb${added === 1 ? '' : 's'} imported.` : 'No new climbs to import.');
   } catch (error) { showToast(error instanceof SyntaxError ? 'This is not a valid backup file.' : error.message || 'Unable to import backup.'); }
@@ -111,14 +109,14 @@ async function saveForm(form) {
   const routeId = oldRoute && !shared ? oldRoute.id : newId();
   const route = validateRoute({ id: routeId, scene: oldRoute?.scene || 'gym', place: data.get('place'), area: oldRoute?.area || '', grade: data.get('grade'), feature: oldRoute?.feature || '', color: data.get('color'), length: oldRoute?.length ?? null, setter: oldRoute?.setter || '', photos: oldRoute?.photos || [], target: data.get('method'), projectStatus: data.get('project') === 'yes' ? oldRoute?.projectStatus || 'active' : '' });
   const log = validateLog({ id: existingLog?.id || newId(), routeId, date: data.get('date'), createdAt: existingLog?.createdAt || now, updatedAt: now, method: data.get('method'), result: outcome === 'attempt' ? 'attempt' : 'send', style: outcome === 'attempt' ? '' : outcome, feel: data.get('feel'), belayer: existingLog?.belayer || '', notes: existingLog?.notes || '' });
-  await write({ routes: [route], logs: [log] }); state = await readAll(); openDate = log.date; navigate('#home'); showToast(id ? 'Climb updated.' : 'Climb logged.');
+  await write({ routes: [route], logs: [log] }); state = await readAll(); navigate('#home'); showToast(id ? 'Climb updated.' : 'Climb logged.');
 }
 async function deleteClimb(id) {
   const log = state.logs.find(item => item.id === id);
   if (!log) return;
   const removeRoutes = state.logs.some(item => item.id !== id && item.routeId === log.routeId) ? [] : [log.routeId];
   await write({ removeLogs: [id], removeRoutes });
-  state = await readAll(); openDate = null; navigate('#home'); showToast('Climb deleted.');
+  state = await readAll(); navigate('#home'); showToast('Climb deleted.');
 }
 app.addEventListener('click', event => {
   const control = event.target.closest('[data-action]');
@@ -128,7 +126,6 @@ app.addEventListener('click', event => {
   if (control.dataset.action === 'import-backup') app.querySelector('#backup-file').click();
   if (control.dataset.action === 'close-detail') closeDetail();
   if (control.dataset.action === 'projects') navigate('#projects');
-  if (control.dataset.action === 'toggle-date') { openDate = control.dataset.date; renderHome(); }
   if (control.dataset.action === 'delete') app.querySelector('#delete-confirm').showModal();
   if (control.dataset.action === 'cancel-delete') app.querySelector('#delete-confirm').close();
   if (control.dataset.action === 'confirm-delete') { app.querySelector('#delete-confirm').close(); deleteClimb(control.dataset.id).catch(error => showToast(error.message || 'Unable to delete this climb.')); }

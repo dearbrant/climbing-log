@@ -16,7 +16,7 @@ npm run dev
 
 ## 当前界面
 
-- Home 按攀爬日期分组，每次只展开一个日期。组内卡片按最近更新时间排序，日期右侧显示记录数。同一天可记录多条相同难度线路，每条记录以独立 ID 保存。
+- Home 按攀爬日期分组，所有日期的卡片默认展示。组内卡片按最近更新时间排序，日期右侧显示记录数。同一天可记录多条相同难度线路，每条记录以独立 ID 保存。
 - 点击卡片直接进入可编辑的 Climb Detail。Update Climb 保存修改，Delete 删除记录；有未保存的修改时关闭会提示确认。Project 标签打开 Project List。
 - Log A Climb 默认今天、Mellow、Auto Belay、Black Line、5.10d、Feel Moderate、Redpoint、Not a Project。
 - 难度选择范围为 5.10a 至 5.15d，包括 5.10ab、5.10bc、5.10cd 等过渡等级。日期、难度和颜色使用浏览器原生控件，在 iOS Safari 上使用系统选择界面。
