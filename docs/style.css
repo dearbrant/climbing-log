@@ -43,9 +43,9 @@
 .confirm-actions button{flex:1;min-height:48px;border-radius:14px;background:#ededed;color:#000;font-size:16px;font-weight:600}
 .confirm-actions [data-action=confirm-delete],.confirm-actions [data-action=keep-editing]{background:#000;color:#fff}
 .home-empty-art{position:absolute;top:48.5%;left:50%;width:min(342px,calc(100% - 48px));height:auto;transform:translate(-50%,-50%);pointer-events:none}
-.home-empty .screen-head h1{font-size:36px;line-height:36px;letter-spacing:0}
-.home-empty .fab{left:calc(50% + min(210px,50vw) - 92px);bottom:max(36px,env(safe-area-inset-bottom));width:72px;height:72px}
-.home-empty .fab img{width:72px;height:72px}
+.home-main .screen-head h1{font-size:36px;line-height:36px;letter-spacing:0}
+.home-main .fab{left:calc(50% + min(210px,50vw) - 92px);bottom:max(36px,env(safe-area-inset-bottom));width:72px;height:72px}
+.home-main .fab img{width:72px;height:72px}
 .home-settings,.home-settings img{display:block;width:48px;height:48px}
 .home-settings{flex:none;background:transparent;padding:0}
 .sync-art{display:block;width:min(342px,100%);height:auto;margin:35px auto 0}
