@@ -52,54 +52,73 @@ async function editor(routeValue = route, logValue = log, isNew = false) {
   };
 }
 
-for (const method of ['auto', 'toprope']) {
-  for (const style of ['first', 'clean']) {
-    test(`旧 ${method}/${style} 记录直接保存保留原值和隐藏字段`, async () => {
-      const oldLog = { ...log, method, style };
-      const page = await editor(route, oldLog);
-      assert.equal(page.form.fields.outcome.value, style);
-      assert.equal(page.form.fields.color.value, '');
-      assert.equal(page.form.fields.feel.value, '');
-      await page.save();
-      assert.deepEqual(page.data.routes[0], route);
-      assert.deepEqual({ ...page.data.logs[0], updatedAt: 0 }, oldLog);
-      assert.deepEqual(model.validateBackup(JSON.parse(JSON.stringify(model.makeBackup(page.data.routes, page.data.logs)))), page.data);
-    });
-  }
-}
-test('只修改旧记录日期，不改变颜色、完攀类型、体感和目标方式', async () => {
+test('打开旧记录只准备默认值，不写入记录；提交后才保存默认值', async () => {
   const page = await editor();
-  page.form.fields.date.value = '2026-10-30';
+  assert.deepEqual(page.data, { routes: [route], logs: [log] });
+  assert.equal(page.form.fields.color.value, 'black');
+  assert.equal(page.form.fields.feel.value, 'Moderate');
+  assert.equal(page.form.fields.outcome.value, 'redpoint');
   await page.save();
-  assert.deepEqual(page.data.routes[0], route);
-  assert.deepEqual({ ...page.data.logs[0], updatedAt: 0 }, { ...log, date: '2026-10-30' });
+  assert.deepEqual(page.data.routes[0], { ...route, color: 'black' });
+  assert.deepEqual({ ...page.data.logs[0], updatedAt: 0 }, { ...log, style: 'redpoint', feel: 'Moderate' });
+  assert.deepEqual(model.validateBackup(JSON.parse(JSON.stringify(model.makeBackup(page.data.routes, page.data.logs)))), page.data);
 });
-test('中文历史体感显示对应选项，保存时保留原始值', async () => {
-  for (const feel of ['简单', '中等', '偏难', '很硬']) {
-    const page = await editor(route, { ...log, feel });
-    assert.equal(page.form.fields.feel.value, feel);
-    await page.save();
-    assert.equal(page.data.logs[0].feel, feel);
+test('表单完攀结果只使用当前设计的五项，不显示历史或空选项', async () => {
+  for (const method of ['auto', 'toprope']) {
+    for (const style of ['first', 'clean']) {
+      const page = await editor(route, { ...log, method, style });
+      assert.deepEqual(page.form.fields.outcome.options, ['onsight', 'flash', 'redpoint', 'repeat', 'attempt']);
+      assert.equal(page.form.fields.outcome.value, 'redpoint');
+      assert.equal(page.form.fields.color.options.includes(''), false);
+      assert.equal(page.form.fields.feel.options.includes(''), false);
+    }
   }
 });
-test('用户主动修改后保存新值，重新打开仍保持新值', async () => {
+test('已有有效记录直接保存保持原值和隐藏字段', async () => {
+  const savedRoute = { ...route, color: 'pink' };
+  const savedLog = { ...log, style: 'flash', feel: 'Hard' };
+  const page = await editor(savedRoute, savedLog);
+  await page.save();
+  assert.deepEqual(page.data.routes[0], savedRoute);
+  assert.deepEqual({ ...page.data.logs[0], updatedAt: 0 }, savedLog);
+});
+test('用户调整值后才提交，重新打开显示提交的新值', async () => {
   const page = await editor();
   page.form.fields.color.value = 'pink';
   page.form.fields.feel.value = 'Hard';
-  page.form.fields.outcome.value = 'redpoint';
+  page.form.fields.outcome.value = 'flash';
+  page.form.fields.date.value = '2026-10-30';
+  assert.deepEqual(page.data, { routes: [route], logs: [log] });
   await page.save();
   const reopened = await editor(page.data.routes[0], page.data.logs[0]);
   assert.equal(reopened.form.fields.color.value, 'pink');
   assert.equal(reopened.form.fields.feel.value, 'Hard');
-  assert.equal(reopened.form.fields.outcome.value, 'redpoint');
+  assert.equal(reopened.form.fields.outcome.value, 'flash');
+  assert.equal(reopened.form.fields.date.value, '2026-10-30');
 });
-test('新增记录继续使用原默认值，不添加历史选项', async () => {
-  const fresh = await editor(route, log, true);
-  assert.equal(fresh.form.fields.place.value, 'Mellow');
-  assert.equal(fresh.form.fields.color.value, 'black');
-  assert.equal(fresh.form.fields.feel.value, 'Moderate');
-  assert.equal(fresh.form.fields.outcome.value, 'redpoint');
-  assert.equal(fresh.form.fields.outcome.options.includes('clean'), false);
-  assert.equal(fresh.form.fields.color.options.includes(''), false);
-  assert.equal(fresh.form.fields.feel.options.includes(''), false);
+test('新建表单八项都有默认值，直接提交即可形成完整记录', async () => {
+  const page = await editor(route, log, true);
+  const expected = { date: model.today(), place: 'Mellow', method: 'auto', color: 'black', grade: '5.10d', feel: 'Moderate', outcome: 'redpoint', project: 'no' };
+  for (const [name, value] of Object.entries(expected)) assert.equal(page.form.fields[name].value, value, name);
+  await page.save();
+  assert.equal(page.data.routes[0].color, 'black');
+  assert.equal(page.data.logs[0].feel, 'Moderate');
+  assert.equal(page.data.logs[0].date, expected.date);
+  assert.equal(page.data.logs[0].style, 'redpoint');
+});
+test('任何必填字段为空都拒绝保存且不写入记录', async () => {
+  for (const name of ['date', 'place', 'method', 'color', 'grade', 'feel', 'outcome', 'project']) {
+    const page = await editor(route, log, true);
+    page.form.fields[name].value = '';
+    await assert.rejects(page.save(), /Complete all fields/);
+    assert.deepEqual(page.data, { routes: [route], logs: [log] });
+  }
+});
+test('中文历史体感用当前英文选项显示，提交后使用当前值', async () => {
+  for (const [old, current] of Object.entries({ 简单: 'Easy', 中等: 'Moderate', 偏难: 'Hard', 很硬: 'Very Hard' })) {
+    const page = await editor(route, { ...log, feel: old });
+    assert.equal(page.form.fields.feel.value, current);
+    await page.save();
+    assert.equal(page.data.logs[0].feel, current);
+  }
 });

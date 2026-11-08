@@ -37,22 +37,19 @@ function renderHome() {
   app.innerHTML = `<div class="app home home-main${dates.length ? '' : ' home-empty'}"><header class="screen-head"><h1>CLIMBING<br>LOG</h1><button class="home-settings" data-action="navigate" data-to="#sync" aria-label="Data Sync">${icon('setting')}</button></header>${dates.length ? dates.map(date => `<section class="date-group"><h2 class="date-row"><span>${dateLabel(date)}</span><span class="weekday">${weekday(date)}</span></h2><div class="cards">${latest(grouped.get(date)).map(log => card(log)).join('')}</div></section>`).join('') : '<img class="home-empty-art" src="./icons/ic_empty.svg" alt="">'}<button class="fab" data-action="navigate" data-to="#new" aria-label="新增攀爬记录">${icon('add')}</button></div>`;
 }
 const option = (value, label, selected) => `<option value="${escapeHtml(value)}" ${value === selected ? 'selected' : ''}>${escapeHtml(label)}</option>`;
-const selectField = (name, label, iconName, choices, selected) => `<label class="field"><b class="field-icon" aria-hidden="true">${icon(iconName)}</b><select name="${name}" aria-label="${label}">${choices.map(([value, text]) => option(value, text, selected)).join('')}</select></label>`;
-const dateField = value => `<label class="field"><b class="field-icon" aria-hidden="true">${icon('date')}</b><input name="date" type="date" value="${escapeHtml(value)}" aria-label="攀爬日期"></label>`;
+const selectField = (name, label, iconName, choices, selected) => `<label class="field"><b class="field-icon" aria-hidden="true">${icon(iconName)}</b><select name="${name}" required aria-label="${label}">${choices.map(([value, text]) => option(value, text, selected)).join('')}</select></label>`;
+const dateField = value => `<label class="field"><b class="field-icon" aria-hidden="true">${icon('date')}</b><input name="date" type="date" required value="${escapeHtml(value)}" aria-label="攀爬日期"></label>`;
 function renderForm(id) {
   const log = id && state.logs.find(item => item.id === id); if (id && !log) return navigate('#home');
   const route = log && routeFor(log);
   const currentGrade = route?.grade || '5.10d';
   const gradeOptions = GRADES.includes(currentGrade) ? GRADES : [currentGrade, ...GRADES];
-  const currentFeel = log?.feel ?? 'Moderate';
+  const currentFeel = feelLabel[log?.feel] || log?.feel || 'Moderate';
   const feelOptions = ['Easy', 'Moderate', 'Hard', 'Very Hard'].map(value => [value, `Feel ${value}`]);
-  if (!feelOptions.some(([value]) => value === currentFeel)) feelOptions.unshift([currentFeel, currentFeel ? `Feel ${feelLabel[currentFeel] || currentFeel}` : 'Feel Not Set']);
-  const currentResult = log?.result === 'attempt' ? 'attempt' : log?.style || 'redpoint';
+  const currentResult = log?.result === 'attempt' ? 'attempt' : Object.keys(results).includes(log?.style) ? log.style : 'redpoint';
   const outcomeOptions = Object.entries(results);
-  if (!results[currentResult]) outcomeOptions.unshift([currentResult, { first: 'First Clean Send', clean: 'Clean Send' }[currentResult] || currentResult]);
-  const currentColor = route?.color ?? 'black';
+  const currentColor = route?.color || 'black';
   const colorOptions = Object.entries(COLORS).map(([value, [text]]) => [value, text]);
-  if (currentColor === '') colorOptions.unshift(['', 'Line Color Not Set']);
   const places = route?.place && !gyms.includes(route.place) ? [route.place, ...gyms] : gyms;
   const dialogs = id ? `<dialog class="confirm-dialog" id="delete-confirm" aria-labelledby="delete-confirm-title"><h2 id="delete-confirm-title">Delete this climb?</h2><p>This cannot be undone.</p><div class="confirm-actions"><button type="button" data-action="cancel-delete">Cancel</button><button type="button" data-action="confirm-delete" data-id="${escapeHtml(id)}">Delete Climb</button></div></dialog><dialog class="confirm-dialog" id="discard-confirm" aria-labelledby="discard-confirm-title"><h2 id="discard-confirm-title">Discard changes?</h2><p>Your edits won't be saved.</p><div class="confirm-actions"><button type="button" data-action="discard-changes">Discard</button><button type="button" data-action="keep-editing" autofocus>Keep Editing</button></div></dialog>` : '';
   app.innerHTML = `<div class="app">${header(id ? 'CLIMB<br>DETAIL' : 'LOG<br>A CLIMB', id ? 'close-detail' : 'navigate')}<form id="climb-form" class="form" data-id="${escapeHtml(id || '')}">
@@ -111,6 +108,7 @@ async function saveForm(form) {
   const id = form.dataset.id || null, existingLog = id ? state.logs.find(log => log.id === id) : null, oldRoute = existingLog ? routeFor(existingLog) : null;
   if (id && !existingLog) throw new Error('This climb is no longer available. Return to Home.');
   const data = new FormData(form), now = Date.now(), outcome = data.get('outcome');
+  if (['date', 'place', 'method', 'color', 'grade', 'feel', 'outcome', 'project'].some(name => !data.get(name)?.trim())) throw new Error('Complete all fields before saving.');
   const shared = oldRoute && state.logs.some(log => log.routeId === oldRoute.id && log.id !== id);
   const routeId = oldRoute && !shared ? oldRoute.id : newId();
   const route = validateRoute({ id: routeId, scene: oldRoute?.scene || 'gym', place: data.get('place'), area: oldRoute?.area || '', grade: data.get('grade'), feature: oldRoute?.feature || '', color: data.get('color'), length: oldRoute?.length ?? null, setter: oldRoute?.setter || '', photos: oldRoute?.photos || [], target: existingLog && data.get('method') === existingLog.method ? oldRoute.target : data.get('method'), projectStatus: data.get('project') === 'yes' ? oldRoute?.projectStatus || 'active' : '' });
