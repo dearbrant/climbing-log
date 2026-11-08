@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'climbing-log-offline-';
-const CACHE_NAME = `${CACHE_PREFIX}20261108-v1`;
+const CACHE_NAME = `${CACHE_PREFIX}20261108-v2`;
 const ASSETS = [
   './index.html',
   './style.css?v=20261108-style-alignment',
-  './app.js?v=20261108-offline',
+  './app.js?v=20261108-legacy-edit',
   './model.js?v=20261108-line-contrast',
   './storage.js?v=20261030-detail-edit',
   './icons.js?v=20261030-feeling-dialog',

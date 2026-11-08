@@ -44,19 +44,25 @@ function renderForm(id) {
   const route = log && routeFor(log);
   const currentGrade = route?.grade || '5.10d';
   const gradeOptions = GRADES.includes(currentGrade) ? GRADES : [currentGrade, ...GRADES];
-  const currentFeel = feelLabel[log?.feel] || log?.feel || 'Moderate';
+  const currentFeel = log?.feel ?? 'Moderate';
+  const feelOptions = ['Easy', 'Moderate', 'Hard', 'Very Hard'].map(value => [value, `Feel ${value}`]);
+  if (!feelOptions.some(([value]) => value === currentFeel)) feelOptions.unshift([currentFeel, currentFeel ? `Feel ${feelLabel[currentFeel] || currentFeel}` : 'Feel Not Set']);
   const currentResult = log?.result === 'attempt' ? 'attempt' : log?.style || 'redpoint';
-  const currentColor = route?.color || 'black';
+  const outcomeOptions = Object.entries(results);
+  if (!results[currentResult]) outcomeOptions.unshift([currentResult, { first: 'First Clean Send', clean: 'Clean Send' }[currentResult] || currentResult]);
+  const currentColor = route?.color ?? 'black';
+  const colorOptions = Object.entries(COLORS).map(([value, [text]]) => [value, text]);
+  if (currentColor === '') colorOptions.unshift(['', 'Line Color Not Set']);
   const places = route?.place && !gyms.includes(route.place) ? [route.place, ...gyms] : gyms;
   const dialogs = id ? `<dialog class="confirm-dialog" id="delete-confirm" aria-labelledby="delete-confirm-title"><h2 id="delete-confirm-title">Delete this climb?</h2><p>This cannot be undone.</p><div class="confirm-actions"><button type="button" data-action="cancel-delete">Cancel</button><button type="button" data-action="confirm-delete" data-id="${escapeHtml(id)}">Delete Climb</button></div></dialog><dialog class="confirm-dialog" id="discard-confirm" aria-labelledby="discard-confirm-title"><h2 id="discard-confirm-title">Discard changes?</h2><p>Your edits won't be saved.</p><div class="confirm-actions"><button type="button" data-action="discard-changes">Discard</button><button type="button" data-action="keep-editing" autofocus>Keep Editing</button></div></dialog>` : '';
   app.innerHTML = `<div class="app">${header(id ? 'CLIMB<br>DETAIL' : 'LOG<br>A CLIMB', id ? 'close-detail' : 'navigate')}<form id="climb-form" class="form" data-id="${escapeHtml(id || '')}">
     ${dateField(log?.date || today())}
     ${selectField('place', 'Climbing Gym', 'place', places.map(value => [value, value]), route?.place || 'Mellow')}
     ${selectField('method', 'Climbing Style', 'method', Object.entries(METHODS), log?.method || 'auto')}
-    ${selectField('color', 'Line Color', 'color', Object.entries(COLORS).map(([value, [text]]) => [value, text]), currentColor)}
+    ${selectField('color', 'Line Color', 'color', colorOptions, currentColor)}
     ${selectField('grade', 'Grade', 'grade', gradeOptions.map(value => [value, value]), currentGrade)}
-    ${selectField('feel', 'Perceived Difficulty', 'feel', ['Easy', 'Moderate', 'Hard', 'Very Hard'].map(value => [value, `Feel ${value}`]), currentFeel)}
-    ${selectField('outcome', 'Send Type', 'outcome', Object.entries(results), currentResult)}
+    ${selectField('feel', 'Perceived Difficulty', 'feel', feelOptions, currentFeel)}
+    ${selectField('outcome', 'Send Type', 'outcome', outcomeOptions, currentResult)}
     ${selectField('project', 'Project', 'project', [['no', 'Not a Project'], ['yes', 'Project']], route?.projectStatus ? 'yes' : 'no')}
     <p class="error" id="form-error" role="alert"></p><button class="save-button" type="submit">${id ? 'Update Climb' : 'Log This Climb'}</button>
     ${id ? '<button class="save-button delete-button" type="button" data-action="delete">Delete</button>' : ''}
@@ -107,8 +113,8 @@ async function saveForm(form) {
   const data = new FormData(form), now = Date.now(), outcome = data.get('outcome');
   const shared = oldRoute && state.logs.some(log => log.routeId === oldRoute.id && log.id !== id);
   const routeId = oldRoute && !shared ? oldRoute.id : newId();
-  const route = validateRoute({ id: routeId, scene: oldRoute?.scene || 'gym', place: data.get('place'), area: oldRoute?.area || '', grade: data.get('grade'), feature: oldRoute?.feature || '', color: data.get('color'), length: oldRoute?.length ?? null, setter: oldRoute?.setter || '', photos: oldRoute?.photos || [], target: data.get('method'), projectStatus: data.get('project') === 'yes' ? oldRoute?.projectStatus || 'active' : '' });
-  const log = validateLog({ id: existingLog?.id || newId(), routeId, date: data.get('date'), createdAt: existingLog?.createdAt || now, updatedAt: now, method: data.get('method'), result: outcome === 'attempt' ? 'attempt' : 'send', style: outcome === 'attempt' ? '' : outcome, feel: data.get('feel'), belayer: existingLog?.belayer || '', notes: existingLog?.notes || '' });
+  const route = validateRoute({ id: routeId, scene: oldRoute?.scene || 'gym', place: data.get('place'), area: oldRoute?.area || '', grade: data.get('grade'), feature: oldRoute?.feature || '', color: data.get('color'), length: oldRoute?.length ?? null, setter: oldRoute?.setter || '', photos: oldRoute?.photos || [], target: existingLog && data.get('method') === existingLog.method ? oldRoute.target : data.get('method'), projectStatus: data.get('project') === 'yes' ? oldRoute?.projectStatus || 'active' : '' });
+  const log = validateLog({ id: existingLog?.id || newId(), routeId, date: data.get('date'), createdAt: existingLog?.createdAt ?? now, updatedAt: now, method: data.get('method'), result: outcome === 'attempt' ? 'attempt' : 'send', style: outcome === 'attempt' ? '' : outcome, feel: data.get('feel'), belayer: existingLog?.belayer || '', notes: existingLog?.notes || '' });
   await write({ routes: [route], logs: [log] }); state = await readAll(); navigate('#home'); showToast(id ? 'Climb updated.' : 'Climb logged.');
 }
 async function deleteClimb(id) {
