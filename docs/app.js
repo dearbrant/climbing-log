@@ -137,3 +137,8 @@ app.addEventListener('submit', async event => { if (event.target.id !== 'climb-f
 window.addEventListener('hashchange', render);
 app.innerHTML = '<div class="app"><p class="empty">Opening your climbing log…</p></div>';
 try { state = await readAll(); render(); } catch (error) { app.innerHTML = `<div class="app"><p class="empty">Unable to open your climbing log: ${escapeHtml(error.message)}</p></div>`; }
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+    .catch(error => console.warn('Offline setup could not finish.', error));
+}
