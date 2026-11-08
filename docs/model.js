@@ -1,6 +1,6 @@
 export const METHODS = { auto: 'Auto Belay', toprope: 'Top Rope', lead: 'Lead' };
 export const SCENES = { gym: '岩馆', outdoor: '野外' };
-export const COLORS = { red: ['Red Line', '#e33316'], orange: ['Orange Line', '#d77400'], yellow: ['Yellow Line', '#c99d00'], green: ['Green Line', '#008000'], cyan: ['Cyan Line', '#008e9a'], blue: ['Blue Line', '#173bd0'], purple: ['Purple Line', '#800080'], black: ['Black Line', '#222222'], white: ['White Line', '#777777'], ochre: ['Ochre Line', '#a66b22'], tiffany: ['Tiffany Blue Line', '#148f91'] };
+export const COLORS = { red: ['Red Line', '#c42b12'], orange: ['Orange Line', '#a45100'], yellow: ['Yellow Line', '#806400'], green: ['Green Line', '#007a00'], cyan: ['Cyan Line', '#00727d'], blue: ['Blue Line', '#173bd0'], purple: ['Purple Line', '#800080'], pink: ['Pink Line', '#c21875'], black: ['Black Line', '#222222'], white: ['White Line', '#666666'], ochre: ['Ochre Line', '#905a1c'], tiffany: ['Tiffany Blue Line', '#08736f'] };
 export const STYLES = { lead: { onsight: 'Onsight', flash: 'Flash', redpoint: 'Redpoint', repeat: 'Repeat 重复完攀' }, toprope: { first: '首次无坠落完成', clean: '练习后无坠落完成', repeat: '重复完成' }, auto: { first: '首次无坠落完成', clean: '练习后无坠落完成', repeat: '重复完成' } };
 export const PROJECTS = { active: '进行中', complete: '已完成', stopped: '已停止' };
 export const FEELS = ['Easy', 'Moderate', 'Hard', 'Very Hard', '简单', '中等', '偏难', '很硬'];

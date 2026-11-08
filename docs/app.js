@@ -1,4 +1,4 @@
-import { METHODS, COLORS, GRADES, today, validateRoute, validateLog, validateBackup, makeBackup, mergeBackup } from './model.js?v=20261030-data-sync';
+import { METHODS, COLORS, GRADES, today, validateRoute, validateLog, validateBackup, makeBackup, mergeBackup } from './model.js?v=20261108-line-contrast';
 import { readAll, write } from './storage.js?v=20261030-detail-edit';
 import { icon } from './icons.js?v=20261030-feeling-dialog';
 

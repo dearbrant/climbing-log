@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { counts, completeProject, validateLog, validateRoute, validateBackup, makeBackup, mergeBackup, validDate, GRADES } from '../docs/model.js';
+import { counts, completeProject, validateLog, validateRoute, validateBackup, makeBackup, mergeBackup, validDate, GRADES, COLORS } from '../docs/model.js';
 const photo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a6WQAAAAASUVORK5CYII=';
 const route = () => ({ id: 'route-1', scene: 'gym', place: '测试岩馆', area: '', grade: '5.11a', feature: '大碗造型', color: 'blue', length: 15, setter: '', photos: [photo], target: 'lead', projectStatus: 'active' });
 const log = (overrides = {}) => ({ id: 'log-1', routeId: 'route-1', date: '2026-10-29', createdAt: 1, updatedAt: 1, method: 'lead', result: 'attempt', style: '', feel: '偏难', belayer: '测试保护员', notes: '练习中', ...overrides });
@@ -65,4 +65,33 @@ test('合并导入幂等，本机编辑优先保留', () => {
 test('备份去除无关属性，用户文字仍保留为普通文字', () => {
   assert.equal(validateRoute({ ...route(), injected: 'extra' }).injected, undefined);
   assert.equal(validateLog(log({ notes: '<img src=x onerror=alert(1)>' })).notes, '<img src=x onerror=alert(1)>');
+});
+
+test('Pink Line 可保存并随旧颜色记录一起备份和导入', () => {
+  const pinkRoute = validateRoute({ ...route(), id: 'pink-route', color: 'pink' });
+  assert.equal(pinkRoute.color, 'pink');
+  const data = { routes: [route(), pinkRoute], logs: [log(), log({ id: 'pink-log', routeId: 'pink-route' })] };
+  const restored = validateBackup(JSON.parse(JSON.stringify(makeBackup(data.routes, data.logs))));
+  assert.deepEqual(restored, data);
+  assert.deepEqual(mergeBackup({ routes: [], logs: [] }, restored), data);
+});
+
+test('所有线路颜色在卡片和表单背景上达到 4.5:1 对比度', () => {
+  const luminance = hex => {
+    const rgb = hex.slice(1).match(/../g).map(value => parseInt(value, 16) / 255);
+    const linear = rgb.map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+    return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+  };
+  for (const [label, color] of Object.values(COLORS)) {
+    for (const background of ['#ffffff', '#ededed']) {
+      const ratio = (luminance(background) + 0.05) / (luminance(color) + 0.05);
+      assert.ok(ratio >= 4.5, `${label} on ${background}: ${ratio}`);
+    }
+  }
+});
+test('所有线路颜色的备份往返保留原颜色标识', () => {
+  const routes = Object.keys(COLORS).map(color => validateRoute({ ...route(), id: `route-${color}`, color }));
+  const logs = routes.map(item => log({ id: `log-${item.color}`, routeId: item.id }));
+  const restored = validateBackup(JSON.parse(JSON.stringify(makeBackup(routes, logs))));
+  assert.deepEqual(restored, { routes, logs });
 });
