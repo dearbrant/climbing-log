@@ -86,9 +86,12 @@ function downloadBackup(file) {
   setTimeout(() => URL.revokeObjectURL(url), 60000);
   showToast('Backup ready to save.');
 }
-function exportData() {
+async function exportData() {
+  let current;
+  try { current = await readAll(); }
+  catch { showToast('Unable to read the latest records. Please try again.'); return; }
   const name = `climbing-log-${today()}.json`;
-  const file = new File([JSON.stringify(makeBackup(state.routes, state.logs), null, 2)], name, { type: 'application/json' });
+  const file = new File([JSON.stringify(makeBackup(current.routes, current.logs), null, 2)], name, { type: 'application/json' });
   if (navigator.canShare?.({ files: [file] })) {
     navigator.share({ files: [file] }).catch(error => { if (error.name !== 'AbortError') downloadBackup(file); });
   } else downloadBackup(file);

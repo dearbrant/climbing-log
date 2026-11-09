@@ -87,8 +87,8 @@ test('断网重开含查询参数的入口及原生模块资源仍可用', async
   for (const [key, value] of online.stores) offline.stores.set(key, value);
   const page = await offline.fetch('./?release=new', { mode: 'navigate' });
   assert.equal(await page.text(), `${scope}index.html`);
-  const module = await offline.fetch('./app.js?v=20261108-form-defaults');
-  assert.equal(await module.text(), `${scope}app.js?v=20261108-form-defaults`);
+  const module = await offline.fetch('./app.js?v=20261109-latest-backup');
+  assert.equal(await module.text(), `${scope}app.js?v=20261109-latest-backup`);
   assert.equal(offline.network.length, 1);
 });
 
