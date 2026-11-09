@@ -58,3 +58,19 @@ export function mergeBackup(current, incoming) {
   // Existing local records always win. Import never overwrites a newer local edit.
   return { routes: [...new Map([...incoming.routes, ...current.routes].map(r => [r.id, r])).values()], logs: [...new Map([...incoming.logs, ...current.logs].map(l => [l.id, l])).values()] };
 }
+
+export function summarizeImport(current, incoming) {
+  const routes = new Map(current.routes.map(route => [route.id, route]));
+  const logs = new Map(current.logs.map(log => [log.id, log]));
+  const same = (left, right, validate) => JSON.stringify(validate(left)) === JSON.stringify(validate(right));
+  const summary = { added: 0, duplicate: 0, conflict: 0, routeConflicts: 0 };
+  for (const route of incoming.routes) if (routes.has(route.id) && !same(routes.get(route.id), route, validateRoute)) summary.routeConflicts++;
+  const incomingRoutes = new Map(incoming.routes.map(route => [route.id, route]));
+  for (const log of incoming.logs) {
+    const local = logs.get(log.id);
+    if (!local) summary.added++;
+    else if (same(local, log, validateLog) && (!routes.has(log.routeId) || same(routes.get(log.routeId), incomingRoutes.get(log.routeId), validateRoute))) summary.duplicate++;
+    else summary.conflict++;
+  }
+  return summary;
+}

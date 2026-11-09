@@ -52,3 +52,5 @@
 .sync-actions{display:grid;gap:8px;margin-top:36px}
 .sync-actions button{height:56px;border-radius:16px;background:#000;color:#fff;font-size:20px;font-weight:600}
 .sync-file-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+
+.sync-info{font-size:14px;line-height:21px;color:#555;margin:16px 0}.sync-page .sync-art{width:180px;margin:20px auto}.sync-page .sync-actions{margin-top:20px}#import-confirm{max-height:calc(100dvh - 48px);overflow:auto}

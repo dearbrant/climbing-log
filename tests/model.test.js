@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { counts, completeProject, validateLog, validateRoute, validateBackup, makeBackup, mergeBackup, validDate, GRADES, COLORS } from '../docs/model.js';
+import { counts, completeProject, validateLog, validateRoute, validateBackup, makeBackup, mergeBackup, validDate, GRADES, COLORS, summarizeImport } from '../docs/model.js';
 const photo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a6WQAAAAASUVORK5CYII=';
 const route = () => ({ id: 'route-1', scene: 'gym', place: '测试岩馆', area: '', grade: '5.11a', feature: '大碗造型', color: 'blue', length: 15, setter: '', photos: [photo], target: 'lead', projectStatus: 'active' });
 const log = (overrides = {}) => ({ id: 'log-1', routeId: 'route-1', date: '2026-10-29', createdAt: 1, updatedAt: 1, method: 'lead', result: 'attempt', style: '', feel: '偏难', belayer: '测试保护员', notes: '练习中', ...overrides });
@@ -94,4 +94,16 @@ test('所有线路颜色的备份往返保留原颜色标识', () => {
   const logs = routes.map(item => log({ id: `log-${item.color}`, routeId: item.id }));
   const restored = validateBackup(JSON.parse(JSON.stringify(makeBackup(routes, logs))));
   assert.deepEqual(restored, { routes, logs });
+});
+
+test('导入预览区分新增、相同副本和冲突，不改变任何输入', () => {
+  const current = { routes: [route()], logs: [log()] };
+  const incoming = { routes: [route(), { ...route(), id: 'r2' }], logs: [log(), log({ id: 'l2', routeId: 'r2' })] };
+  const before = structuredClone({ current, incoming });
+  assert.deepEqual(summarizeImport(current, incoming), { added: 1, duplicate: 1, conflict: 0, routeConflicts: 0 });
+  assert.deepEqual({ current, incoming }, before);
+  incoming.logs[0].notes = '其他设备编辑';
+  assert.deepEqual(summarizeImport(current, incoming), { added: 1, duplicate: 0, conflict: 1, routeConflicts: 0 });
+  incoming.routes[0].grade = '5.12a';
+  assert.equal(summarizeImport(current, incoming).routeConflicts, 1);
 });

@@ -11,7 +11,7 @@ const log = id => ({ id, routeId: id, date: '2026-11-09', createdAt: 1, updatedA
 async function exporter({ sharing = false, shareError } = {}) {
   let current = { routes: [route('old')], logs: [log('old')] }, fail = false;
   const downloaded = [], shared = [];
-  const app = { addEventListener() {}, innerHTML: '' };
+  const app = { addEventListener() {}, querySelector() { return null; }, innerHTML: '' };
   const toast = { classList: { add() {}, remove() {} }, textContent: '' };
   const deps = { ...model, File, icon: () => '', downloaded,
     document: { querySelector: selector => selector === '#app' ? app : toast },
@@ -21,6 +21,7 @@ async function exporter({ sharing = false, shareError } = {}) {
       shared.push(...files);
     } },
     setTimeout() {}, clearTimeout() {},
+    write: async () => {},
     readAll: async () => { if (fail) throw new Error('Read failed'); return structuredClone(current); },
   };
   const api = await new AsyncFunction(...Object.keys(deps), `${source}\ndownloadBackup = file => downloaded.push(file); return { exportData };`)(...Object.values(deps));

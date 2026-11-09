@@ -1,4 +1,4 @@
-import { METHODS, COLORS, GRADES, today, validateRoute, validateLog, validateBackup, makeBackup, mergeBackup } from './model.js?v=20261108-line-contrast';
+import { METHODS, COLORS, GRADES, today, validateRoute, validateLog, validateBackup, makeBackup, summarizeImport } from './model.js?v=20261109-sync-feedback';
 import { readAll, write } from './storage.js?v=20261030-detail-edit';
 import { icon } from './icons.js?v=20261030-feeling-dialog';
 
@@ -21,6 +21,8 @@ let initialFormData = null;
 let activeHash = location.hash;
 let pendingHash = null;
 let toastTimer;
+let pendingBackup = null;
+let syncMessage = '';
 const routeFor = log => state.routes.find(route => route.id === log.routeId);
 const updatedAt = log => log.updatedAt ?? log.createdAt;
 const dateLabel = date => { const day = new Date(`${date}T12:00:00`); return `${day.getMonth() + 1}/${day.getDate()}/${day.getFullYear()}`; };
@@ -77,8 +79,23 @@ function renderProjects() {
   const logs = latest(state.logs.filter(log => routeFor(log)?.projectStatus)).filter(log => { if (seen.has(log.routeId)) return false; seen.add(log.routeId); return true; });
   app.innerHTML = `<div class="app home">${header('PROJECT')}${logs.length ? `<div class="project-list">${logs.map(log => card(log, false)).join('')}</div>` : '<p class="empty">No routes marked as Projects yet.</p>'}<button class="fab" data-action="navigate" data-to="#new" aria-label="新增攀爬记录">${icon('add')}</button></div>`;
 }
+function syncStatus(message) {
+  syncMessage = message;
+  const target = app.querySelector('#sync-feedback');
+  if (target) target.textContent = message;
+  showToast(message);
+}
+async function refreshSyncInfo() {
+  try {
+    const current = await readAll();
+    const info = app.querySelector('#sync-info');
+    if (info) info.textContent = `${current.logs.length} climbs on this device. Last export prepared: ${current.meta?.lastExportPreparedAt ? new Date(current.meta.lastExportPreparedAt).toLocaleString() : 'Not recorded'}.`;
+  } catch { syncStatus('Unable to read local records. Please try again.'); }
+}
 function renderSync() {
-  app.innerHTML = `<div class="app sync-page">${header('DATA<br>SYNC')}<img class="sync-art" src="./icons/ic_datasync.svg" alt=""><div class="sync-actions"><button type="button" data-action="export-data">Export Data</button><button type="button" data-action="import-backup">Import Backup</button><input class="sync-file-input" id="backup-file" type="file" accept=".json,application/json" tabindex="-1"></div></div>`;
+  pendingBackup = null;
+  app.innerHTML = `<div class="app sync-page">${header('DATA<br>SYNC')}<img class="sync-art" src="./icons/ic_datasync.svg" alt=""><p class="sync-info" id="sync-info">Loading local records…</p><p class="sync-info">Backups are manual. An export operation does not confirm that a file was saved. Keep a JSON copy in Files.</p><div class="sync-actions"><button type="button" data-action="export-data">Export Data</button><button type="button" data-action="import-backup">Import Backup</button><input class="sync-file-input" id="backup-file" type="file" accept=".json,application/json" tabindex="-1"></div><p class="sync-info" id="sync-feedback" role="status">${escapeHtml(syncMessage)}</p><dialog class="confirm-dialog" id="import-confirm" aria-labelledby="import-title"><h2 id="import-title">Import backup?</h2><p id="import-summary"></p><p>Matching IDs keep local records, including local edits. New climbs may use existing local route details.</p><p id="import-error" class="error" role="alert"></p><div class="confirm-actions"><button type="button" data-action="cancel-import">Cancel</button><button type="button" data-action="confirm-import">Import</button></div></dialog></div>`;
+  refreshSyncInfo();
 }
 const formValues = form => JSON.stringify([...new FormData(form)]);
 function hasUnsavedChanges() {
@@ -130,28 +147,49 @@ function downloadBackup(file) {
   const url = URL.createObjectURL(file), link = document.createElement('a');
   link.href = url; link.download = file.name; document.body.append(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
-  showToast('Backup ready to save.');
+  syncStatus('Backup ready to save. Confirm the JSON file is in Files.');
 }
 async function exportData() {
   let current;
   try { current = await readAll(); }
-  catch { showToast('Unable to read the latest records. Please try again.'); return; }
+  catch { syncStatus('Unable to read the latest records. Please try again.'); return; }
   const name = `climbing-log-${today()}.json`;
   const file = new File([JSON.stringify(makeBackup(current.routes, current.logs), null, 2)], name, { type: 'application/json' });
+  const historyUpdate = write({ meta: { lastExportPreparedAt: Date.now() } }).then(refreshSyncInfo).catch(() => syncStatus('Export history could not be updated. Check the JSON file in Files.'));
   if (navigator.canShare?.({ files: [file] })) {
-    navigator.share({ files: [file] }).catch(error => { if (error.name !== 'AbortError') downloadBackup(file); });
+    await navigator.share({ files: [file] }).then(() => syncStatus('Backup handed to the share sheet. Confirm it is saved in Files.')).catch(error => { if (error.name !== 'AbortError') downloadBackup(file); else syncStatus('Export cancelled.'); });
   } else downloadBackup(file);
+  await historyUpdate;
+}
+function importSummaryText(summary) {
+  return `${summary.added} new climbs, ${summary.duplicate} duplicates, ${summary.conflict} conflicting climbs. ${summary.routeConflicts} conflicting routes. Local records will be kept.`;
 }
 async function importBackup(input) {
   const file = input.files[0]; input.value = '';
   if (!file) return;
   try {
     const backup = validateBackup(JSON.parse(await file.text()));
-    const current = await readAll(), merged = mergeBackup(current, backup);
-    await write(merged); state = await readAll();
-    const added = merged.logs.length - current.logs.length;
-    showToast(added ? `${added} climb${added === 1 ? '' : 's'} imported.` : 'No new climbs to import.');
-  } catch (error) { showToast(error instanceof SyntaxError ? 'This is not a valid backup file.' : error.message || 'Unable to import backup.'); }
+    const summary = summarizeImport(await readAll(), backup);
+    pendingBackup = backup;
+    app.querySelector('#import-error').textContent = '';
+    app.querySelector('#import-summary').textContent = importSummaryText(summary);
+    app.querySelector('#import-confirm').showModal();
+  } catch (error) { pendingBackup = null; syncStatus(error instanceof SyntaxError ? 'This is not a valid JSON backup.' : error.message || 'Unable to read backup.'); }
+}
+async function confirmImport(button) {
+  if (!pendingBackup || button.disabled) return;
+  button.disabled = true;
+  try {
+    const current = await readAll(), summary = summarizeImport(current, pendingBackup);
+    const routeIds = new Set(current.routes.map(route => route.id));
+    const logIds = new Set(current.logs.map(log => log.id));
+    await write({ routes: pendingBackup.routes.filter(route => !routeIds.has(route.id)), logs: pendingBackup.logs.filter(log => !logIds.has(log.id)) });
+    state = await readAll(); pendingBackup = null;
+    app.querySelector('#import-confirm').close();
+    refreshSyncInfo();
+    syncStatus(`Import complete. ${summary.added} climbs added; ${summary.duplicate} duplicates and ${summary.conflict} conflicting climbs kept locally.`);
+  } catch (error) { app.querySelector('#import-error').textContent = error.message || 'Import failed. Please try again.'; }
+  finally { button.disabled = false; }
 }
 async function saveForm(form) {
   const id = form.dataset.id || null, existingLog = id ? state.logs.find(log => log.id === id) : null, oldRoute = existingLog ? routeFor(existingLog) : null;
@@ -176,6 +214,8 @@ app.addEventListener('click', event => {
   if (!control) { const card = event.target.closest('.climb-card'); if (card) card.querySelector('.card-open')?.click(); return; }
   if (control.dataset.action === 'navigate') navigate(control.dataset.to);
   if (control.dataset.action === 'export-data') exportData();
+  if (control.dataset.action === 'confirm-import') confirmImport(control);
+  if (control.dataset.action === 'cancel-import') { pendingBackup = null; app.querySelector('#import-confirm').close(); syncStatus('Import cancelled. No records changed.'); }
   if (control.dataset.action === 'import-backup') app.querySelector('#backup-file').click();
   if (control.dataset.action === 'close-detail') closeDetail();
   if (control.dataset.action === 'projects') navigate('#projects');
