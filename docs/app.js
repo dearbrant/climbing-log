@@ -94,7 +94,7 @@ async function refreshSyncInfo() {
 }
 function renderSync() {
   pendingBackup = null;
-  app.innerHTML = `<div class="app sync-page">${header('DATA<br>SYNC')}<img class="sync-art" src="./icons/ic_datasync.svg" alt=""><p class="sync-info" id="sync-info">Loading local records…</p><p class="sync-info">Backups are manual. An export operation does not confirm that a file was saved. Keep a JSON copy in Files.</p><div class="sync-actions"><button type="button" data-action="export-data">Export Data</button><button type="button" data-action="import-backup">Import Backup</button><input class="sync-file-input" id="backup-file" type="file" accept=".json,application/json" tabindex="-1"></div><p class="sync-info" id="sync-feedback" role="status">${escapeHtml(syncMessage)}</p><dialog class="confirm-dialog" id="import-confirm" aria-labelledby="import-title"><h2 id="import-title">Import backup?</h2><p id="import-summary"></p><p>Matching IDs keep local records, including local edits. New climbs may use existing local route details.</p><p id="import-error" class="error" role="alert"></p><div class="confirm-actions"><button type="button" data-action="cancel-import">Cancel</button><button type="button" data-action="confirm-import">Import</button></div></dialog></div>`;
+  app.innerHTML = `<div class="app sync-page">${header('DATA<br>SYNC')}<img class="sync-art" src="./icons/ic_datasync.svg" alt=""><div class="sync-actions"><button type="button" data-action="import-backup">Import Backup</button><button type="button" data-action="export-data">Export Data</button><input class="sync-file-input" id="backup-file" type="file" accept=".json,application/json" tabindex="-1"></div><p class="sync-info" id="sync-info">Loading local records…</p><p class="sync-info" id="sync-feedback" role="status">${escapeHtml(syncMessage)}</p><dialog class="confirm-dialog" id="import-confirm" aria-labelledby="import-title"><h2 id="import-title">Import backup?</h2><p id="import-summary"></p><p>Matching IDs keep local records, including local edits. New climbs may use existing local route details.</p><p id="import-error" class="error" role="alert"></p><div class="confirm-actions"><button type="button" data-action="cancel-import">Cancel</button><button type="button" data-action="confirm-import">Import</button></div></dialog></div>`;
   refreshSyncInfo();
 }
 const formValues = form => JSON.stringify([...new FormData(form)]);
@@ -147,7 +147,7 @@ function downloadBackup(file) {
   const url = URL.createObjectURL(file), link = document.createElement('a');
   link.href = url; link.download = file.name; document.body.append(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
-  syncStatus('Backup ready to save. Confirm the JSON file is in Files.');
+  syncStatus('Export ready.');
 }
 async function exportData() {
   let current;
@@ -157,7 +157,7 @@ async function exportData() {
   const file = new File([JSON.stringify(makeBackup(current.routes, current.logs), null, 2)], name, { type: 'application/json' });
   const historyUpdate = write({ meta: { lastExportPreparedAt: Date.now() } }).then(refreshSyncInfo).catch(() => syncStatus('Export history could not be updated. Check the JSON file in Files.'));
   if (navigator.canShare?.({ files: [file] })) {
-    await navigator.share({ files: [file] }).then(() => syncStatus('Backup handed to the share sheet. Confirm it is saved in Files.')).catch(error => { if (error.name !== 'AbortError') downloadBackup(file); else syncStatus('Export cancelled.'); });
+    await navigator.share({ files: [file] }).then(() => syncStatus('Export ready.')).catch(error => { if (error.name !== 'AbortError') downloadBackup(file); else syncStatus('Export cancelled.'); });
   } else downloadBackup(file);
   await historyUpdate;
 }
