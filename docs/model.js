@@ -1,6 +1,6 @@
 export const METHODS = { auto: 'Auto Belay', toprope: 'Top Rope', lead: 'Lead' };
 export const SCENES = { gym: '岩馆', outdoor: '野外' };
-export const COLORS = { red: ['Red Line', '#FF0000'], orange: ['Orange Line', '#FF5722'], yellow: ['Yellow Line', '#FDD835'], green: ['Green Line', '#4CAF50'], cyan: ['Cyan Line', '#00E5FF'], blue: ['Blue Line', '#2196F3'], purple: ['Purple Line', '#9C27B0'], black: ['Black Line', '#000000'], white: ['White Line', '#FFFFFF'], ochre: ['Ochre Line', '#CC7722'], pink: ['Pink Line', '#EC407A'] };
+export const COLORS = { red: ['Red Line', '#FF0000'], orange: ['Orange Line', '#FF5722'], yellow: ['Yellow Line', '#FFC107'], green: ['Green Line', '#4CAF50'], cyan: ['Cyan Line', '#00E5FF'], blue: ['Blue Line', '#2196F3'], purple: ['Purple Line', '#9C27B0'], black: ['Black Line', '#000000'], white: ['White Line', '#FFFFFF'], ochre: ['Ochre Line', '#CC7722'], pink: ['Pink Line', '#EC407A'] };
 // Kept only for existing records and backups; not offered for new climbs.
 export const LEGACY_COLORS = { tiffany: ['Tiffany Blue Line', '#08736f'] };
 export const STYLES = { lead: { onsight: 'Onsight', flash: 'Flash', redpoint: 'Redpoint', repeat: 'Repeat 重复完攀' }, toprope: { first: '首次无坠落完成', clean: '练习后无坠落完成', repeat: '重复完成' }, auto: { first: '首次无坠落完成', clean: '练习后无坠落完成', repeat: '重复完成' } };

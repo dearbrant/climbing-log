@@ -1,4 +1,4 @@
-import { METHODS, COLORS, LEGACY_COLORS, GRADES, today, validateRoute, validateLog, validateBackup, makeBackup, summarizeImport } from './model.js?v=20261109-palette-scroll';
+import { METHODS, COLORS, LEGACY_COLORS, GRADES, today, validateRoute, validateLog, validateBackup, makeBackup, summarizeImport } from './model.js?v=20261109-import-spacing';
 import { readAll, write } from './storage.js?v=20261030-detail-edit';
 import { icon } from './icons.js?v=20261030-feeling-dialog';
 

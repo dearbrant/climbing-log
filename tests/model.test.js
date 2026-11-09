@@ -78,7 +78,7 @@ test('Pink Line 可保存并随旧颜色记录一起备份和导入', () => {
 
 test('当前颜色采用用户截图色值，保留 Black Line 名称且不再提供 Tiffany Blue', () => {
   assert.deepEqual(Object.fromEntries(Object.entries(COLORS).map(([key, value]) => [key, value[1]])), {
-    red: '#FF0000', orange: '#FF5722', yellow: '#FDD835', green: '#4CAF50', cyan: '#00E5FF', blue: '#2196F3', purple: '#9C27B0', black: '#000000', white: '#FFFFFF', ochre: '#CC7722', pink: '#EC407A',
+    red: '#FF0000', orange: '#FF5722', yellow: '#FFC107', green: '#4CAF50', cyan: '#00E5FF', blue: '#2196F3', purple: '#9C27B0', black: '#000000', white: '#FFFFFF', ochre: '#CC7722', pink: '#EC407A',
   });
   assert.equal(COLORS.black[0], 'Black Line');
   assert.equal(COLORS.tiffany, undefined);
