@@ -9,11 +9,13 @@ const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 const route = { id: 'old-route', scene: 'outdoor', place: 'Old Gym', area: 'Old Area', grade: '5.9+', feature: 'Old Feature', color: '', length: 15, setter: 'Setter', photos: [], target: 'lead', projectStatus: 'stopped' };
 const log = { id: 'old-log', routeId: route.id, date: '2026-10-29', createdAt: 0, updatedAt: 0, method: 'toprope', result: 'send', style: 'clean', feel: '', belayer: 'Belayer', notes: 'Old Notes' };
 
-async function editor(routeValue = route, logValue = log, isNew = false) {
+async function editor(routeValue = route, logValue = log, isNew = false, drafts = new Map()) {
   let data = { routes: [structuredClone(routeValue)], logs: [structuredClone(logValue)] };
   let form;
+  const listeners = new Map();
+  const dialog = { open: false, showModal() { this.open = true; }, close() { this.open = false; } };
   const app = {
-    addEventListener() {},
+    addEventListener(type, fn) { listeners.set(type, fn); },
     set innerHTML(html) {
       if (!html.includes('id="climb-form"')) return;
       const fields = {};
@@ -23,18 +25,20 @@ async function editor(routeValue = route, logValue = log, isNew = false) {
         fields[name] = { value: selected[1], style: {}, options: options.map(option => option[1]) };
       }
       fields.date = { value: html.match(/name="date"[^>]*value="([^"]*)"/)[1] };
-      form = { dataset: { id: html.match(/class="form" data-id="([^"]*)"/)[1] }, fields };
+      form = { elements: { namedItem: name => fields[name] }, dataset: { id: html.match(/class="form" data-id="([^"]*)"/)[1] }, fields };
     },
     querySelector(selector) {
       if (selector === '#climb-form') return form;
+      if (selector === '#discard-confirm') return dialog;
       return form.fields.color;
     },
   };
   const toast = { classList: { add() {}, remove() {} } };
   const deps = { ...model, icon: () => '', crypto: webcrypto,
     document: { querySelector: selector => selector === '#app' ? app : toast },
-    window: { addEventListener() {} }, location: { hash: '#home' }, navigator: {},
+    window: { addEventListener() {} }, location: { hash: isNew ? '#new' : `#detail/${logValue.id}` }, navigator: {},
     clearTimeout() {}, setTimeout() {},
+    sessionStorage: { getItem: key => drafts.get(key) || null, setItem: (key, value) => drafts.set(key, value), removeItem: key => drafts.delete(key) },
     FormData: class {
       constructor(formValue) { this.entries = Object.entries(formValue.fields).map(([name, field]) => [name, field.value]); }
       get(name) { return this.entries.find(([key]) => key === name)?.[1]; }
@@ -43,9 +47,11 @@ async function editor(routeValue = route, logValue = log, isNew = false) {
     readAll: async () => structuredClone(data),
     write: async ({ routes, logs }) => { data = { routes, logs }; },
   };
-  const api = await new AsyncFunction(...Object.keys(deps), `${source}\nreturn { renderForm, saveForm };`)(...Object.values(deps));
+  const api = await new AsyncFunction(...Object.keys(deps), `${source}\nreturn { renderForm, saveForm, hasUnsavedChanges, rememberDraft, navigate };`)(...Object.values(deps));
   api.renderForm(isNew ? undefined : logValue.id);
   return {
+    api, drafts, dialog,
+    click: action => listeners.get('click')({ target: { closest: () => ({ dataset: { action } }) } }),
     get form() { return form; },
     get data() { return data; },
     save: () => api.saveForm(form),
@@ -121,4 +127,33 @@ test('中文历史体感用当前英文选项显示，提交后使用当前值',
     await page.save();
     assert.equal(page.data.logs[0].feel, current);
   }
+});
+
+test('新建和编辑修改后关闭可继续编辑或放弃，草稿不写入正式记录', async () => {
+  for (const isNew of [true, false]) {
+    const page = await editor(route, log, isNew);
+    assert.equal(page.api.hasUnsavedChanges(), false);
+    page.form.fields.color.value = 'pink';
+    page.api.navigate('#home');
+    assert.equal(page.dialog.open, true);
+    page.click('keep-editing');
+    assert.equal(page.form.fields.color.value, 'pink');
+    assert.deepEqual(page.data, { routes: [route], logs: [log] });
+    page.api.navigate('#home');
+    page.click('discard-changes');
+    assert.equal(page.drafts.size, 0);
+    assert.equal(page.api.hasUnsavedChanges(), false);
+  }
+});
+test('刷新恢复会话草稿，保存成功清理草稿，不改变新增默认值', async () => {
+  const page = await editor(route, log, true);
+  page.form.fields.color.value = 'pink';
+  page.api.rememberDraft();
+  const restored = await editor(route, log, true, page.drafts);
+  assert.equal(restored.form.fields.color.value, 'pink');
+  assert.equal(restored.api.hasUnsavedChanges(), true);
+  await restored.save();
+  assert.equal(restored.drafts.size, 0);
+  const fresh = await editor(route, log, true, page.drafts);
+  assert.equal(fresh.form.fields.color.value, 'black');
 });

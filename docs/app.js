@@ -18,6 +18,8 @@ const feelLabel = { 简单: 'Easy', 中等: 'Moderate', 偏难: 'Hard', 很硬: 
 let state = { routes: [], logs: [] };
 let returnTo = '#home';
 let initialFormData = null;
+let activeHash = location.hash;
+let pendingHash = null;
 let toastTimer;
 const routeFor = log => state.routes.find(route => route.id === log.routeId);
 const updatedAt = log => log.updatedAt ?? log.createdAt;
@@ -51,8 +53,8 @@ function renderForm(id) {
   const currentColor = route?.color || 'black';
   const colorOptions = Object.entries(COLORS).map(([value, [text]]) => [value, text]);
   const places = route?.place && !gyms.includes(route.place) ? [route.place, ...gyms] : gyms;
-  const dialogs = id ? `<dialog class="confirm-dialog" id="delete-confirm" aria-labelledby="delete-confirm-title"><h2 id="delete-confirm-title">Delete this climb?</h2><p>This cannot be undone.</p><div class="confirm-actions"><button type="button" data-action="cancel-delete">Cancel</button><button type="button" data-action="confirm-delete" data-id="${escapeHtml(id)}">Delete Climb</button></div></dialog><dialog class="confirm-dialog" id="discard-confirm" aria-labelledby="discard-confirm-title"><h2 id="discard-confirm-title">Discard changes?</h2><p>Your edits won't be saved.</p><div class="confirm-actions"><button type="button" data-action="discard-changes">Discard</button><button type="button" data-action="keep-editing" autofocus>Keep Editing</button></div></dialog>` : '';
-  app.innerHTML = `<div class="app">${header(id ? 'CLIMB<br>DETAIL' : 'LOG<br>A CLIMB', id ? 'close-detail' : 'navigate')}<form id="climb-form" class="form" data-id="${escapeHtml(id || '')}">
+  const dialogs = (id ? `<dialog class="confirm-dialog" id="delete-confirm" aria-labelledby="delete-confirm-title"><h2 id="delete-confirm-title">Delete this climb?</h2><p>This cannot be undone.</p><div class="confirm-actions"><button type="button" data-action="cancel-delete">Cancel</button><button type="button" data-action="confirm-delete" data-id="${escapeHtml(id)}">Delete Climb</button></div></dialog>` : '') + `<dialog class="confirm-dialog" id="discard-confirm" aria-labelledby="discard-confirm-title"><h2 id="discard-confirm-title">Discard changes?</h2><p>Your edits won't be saved.</p><div class="confirm-actions"><button type="button" data-action="discard-changes">Discard</button><button type="button" data-action="keep-editing" autofocus>Keep Editing</button></div></dialog>`;
+  app.innerHTML = `<div class="app">${header(id ? 'CLIMB<br>DETAIL' : 'LOG<br>A CLIMB', 'close-detail')}<form id="climb-form" class="form" data-id="${escapeHtml(id || '')}">
     ${dateField(log?.date || today())}
     ${selectField('place', 'Climbing Gym', 'place', places.map(value => [value, value]), route?.place || 'Mellow')}
     ${selectField('method', 'Climbing Style', 'method', Object.entries(METHODS), log?.method || 'auto')}
@@ -65,7 +67,9 @@ function renderForm(id) {
     ${id ? '<button class="save-button delete-button" type="button" data-action="delete">Delete</button>' : ''}
   </form>${dialogs}</div>`;
   updateColor();
-  initialFormData = id ? JSON.stringify([...new FormData(app.querySelector('#climb-form'))]) : null;
+  initialFormData = formValues(app.querySelector('#climb-form'));
+  restoreDraft();
+  updateColor();
 }
 function updateColor() { const select = app.querySelector('[name="color"]'); if (select) select.style.color = COLORS[select.value]?.[1] || '#111'; }
 function renderProjects() {
@@ -77,9 +81,51 @@ function renderSync() {
   app.innerHTML = `<div class="app sync-page">${header('DATA<br>SYNC')}<img class="sync-art" src="./icons/ic_datasync.svg" alt=""><div class="sync-actions"><button type="button" data-action="export-data">Export Data</button><button type="button" data-action="import-backup">Import Backup</button><input class="sync-file-input" id="backup-file" type="file" accept=".json,application/json" tabindex="-1"></div></div>`;
 }
 const formValues = form => JSON.stringify([...new FormData(form)]);
-function closeDetail() { if (formValues(app.querySelector('#climb-form')) !== initialFormData) app.querySelector('#discard-confirm').showModal(); else navigate(returnTo); }
-function navigate(hash) { if (hash.startsWith('#detail/')) returnTo = location.hash === '#projects' ? '#projects' : '#home'; location.hash = hash; render(); }
-function render() { const [page, id] = location.hash.slice(1).split('/'); if (page === 'new') renderForm(); else if (page === 'detail' || page === 'edit') renderForm(id); else if (page === 'projects') renderProjects(); else if (page === 'sync') renderSync(); else renderHome(); }
+function hasUnsavedChanges() {
+  const form = app.querySelector('#climb-form');
+  return initialFormData !== null && form && formValues(form) !== initialFormData;
+}
+const draftKey = () => `climbing-log-draft:${activeHash}`;
+function clearDraft() { try { sessionStorage.removeItem(draftKey()); } catch {} }
+function rememberDraft() {
+  if (initialFormData === null) return;
+  try {
+    if (hasUnsavedChanges()) sessionStorage.setItem(draftKey(), JSON.stringify({ base: initialFormData, values: [...new FormData(app.querySelector('#climb-form'))] }));
+    else clearDraft();
+  } catch { showToast('Unable to keep a draft. Save before leaving.'); }
+}
+function restoreDraft() {
+  try {
+    const draft = JSON.parse(sessionStorage.getItem(draftKey()));
+    if (!draft) return;
+    if (draft.base !== initialFormData) { clearDraft(); return; }
+    const form = app.querySelector('#climb-form');
+    for (const [name, value] of draft.values) {
+      const field = form.elements.namedItem(name);
+      if (field && (field.tagName !== 'SELECT' || [...field.options].some(option => option.value === value))) field.value = value;
+    }
+    if (hasUnsavedChanges()) showToast('Unsaved changes restored.');
+  } catch { clearDraft(); }
+}
+function askDiscard(hash) {
+  pendingHash = hash;
+  rememberDraft();
+  const dialog = app.querySelector('#discard-confirm');
+  if (!dialog.open) dialog.showModal();
+}
+function closeDetail() { navigate(app.querySelector('#climb-form').dataset.id ? returnTo : '#home'); }
+function navigate(hash) {
+  if (hasUnsavedChanges()) { askDiscard(hash); return; }
+  if (hash.startsWith('#detail/')) returnTo = location.hash === '#projects' ? '#projects' : '#home';
+  location.hash = hash;
+  render();
+}
+function render() {
+  activeHash = location.hash;
+  initialFormData = null;
+  const [page, id] = location.hash.slice(1).split('/');
+  if (page === 'new') renderForm(); else if (page === 'detail' || page === 'edit') renderForm(id); else if (page === 'projects') renderProjects(); else if (page === 'sync') renderSync(); else renderHome();
+}
 function downloadBackup(file) {
   const url = URL.createObjectURL(file), link = document.createElement('a');
   link.href = url; link.download = file.name; document.body.append(link); link.click(); link.remove();
@@ -116,14 +162,14 @@ async function saveForm(form) {
   const routeId = oldRoute && !shared ? oldRoute.id : newId();
   const route = validateRoute({ id: routeId, scene: oldRoute?.scene || 'gym', place: data.get('place'), area: oldRoute?.area || '', grade: data.get('grade'), feature: oldRoute?.feature || '', color: data.get('color'), length: oldRoute?.length ?? null, setter: oldRoute?.setter || '', photos: oldRoute?.photos || [], target: existingLog && data.get('method') === existingLog.method ? oldRoute.target : data.get('method'), projectStatus: data.get('project') === 'yes' ? oldRoute?.projectStatus || 'active' : '' });
   const log = validateLog({ id: existingLog?.id || newId(), routeId, date: data.get('date'), createdAt: existingLog?.createdAt ?? now, updatedAt: now, method: data.get('method'), result: outcome === 'attempt' ? 'attempt' : 'send', style: outcome === 'attempt' ? '' : outcome, feel: data.get('feel'), belayer: existingLog?.belayer || '', notes: existingLog?.notes || '' });
-  await write({ routes: [route], logs: [log] }); state = await readAll(); navigate('#home'); showToast(id ? 'Climb updated.' : 'Climb logged.');
+  await write({ routes: [route], logs: [log] }); state = await readAll(); clearDraft(); initialFormData = null; navigate('#home'); showToast(id ? 'Climb updated.' : 'Climb logged.');
 }
 async function deleteClimb(id) {
   const log = state.logs.find(item => item.id === id);
   if (!log) return;
   const removeRoutes = state.logs.some(item => item.id !== id && item.routeId === log.routeId) ? [] : [log.routeId];
   await write({ removeLogs: [id], removeRoutes });
-  state = await readAll(); navigate('#home'); showToast('Climb deleted.');
+  state = await readAll(); clearDraft(); initialFormData = null; navigate('#home'); showToast('Climb deleted.');
 }
 app.addEventListener('click', event => {
   const control = event.target.closest('[data-action]');
@@ -137,11 +183,21 @@ app.addEventListener('click', event => {
   if (control.dataset.action === 'cancel-delete') app.querySelector('#delete-confirm').close();
   if (control.dataset.action === 'confirm-delete') { app.querySelector('#delete-confirm').close(); deleteClimb(control.dataset.id).catch(error => showToast(error.message || 'Unable to delete this climb.')); }
   if (control.dataset.action === 'keep-editing') app.querySelector('#discard-confirm').close();
-  if (control.dataset.action === 'discard-changes') { app.querySelector('#discard-confirm').close(); navigate(returnTo); }
+  if (control.dataset.action === 'discard-changes') { const target = pendingHash || '#home'; clearDraft(); initialFormData = null; pendingHash = null; app.querySelector('#discard-confirm').close(); navigate(target); }
 });
-app.addEventListener('change', event => { if (event.target.name === 'color') updateColor(); if (event.target.id === 'backup-file') importBackup(event.target); });
+app.addEventListener('input', rememberDraft);
+app.addEventListener('change', event => { if (event.target.closest('#climb-form')) rememberDraft(); if (event.target.name === 'color') updateColor(); if (event.target.id === 'backup-file') importBackup(event.target); });
 app.addEventListener('submit', async event => { if (event.target.id !== 'climb-form') return; event.preventDefault(); const button = event.target.querySelector('[type="submit"]'); button.disabled = true; try { await saveForm(event.target); } catch (error) { event.target.querySelector('#form-error').textContent = error.message || 'Unable to save this climb.'; button.disabled = false; } });
-window.addEventListener('hashchange', render);
+window.addEventListener('hashchange', () => {
+  if (location.hash === activeHash) return;
+  if (hasUnsavedChanges()) {
+    const target = location.hash;
+    history.pushState(null, '', activeHash || '#home');
+    askDiscard(target);
+  } else render();
+});
+window.addEventListener('pagehide', rememberDraft);
+document.addEventListener?.('visibilitychange', () => { if (document.visibilityState === 'hidden') rememberDraft(); });
 app.innerHTML = '<div class="app"><p class="empty">Opening your climbing log…</p></div>';
 try { state = await readAll(); render(); } catch (error) { app.innerHTML = `<div class="app"><p class="empty">Unable to open your climbing log: ${escapeHtml(error.message)}</p></div>`; }
 
