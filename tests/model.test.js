@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { counts, completeProject, validateLog, validateRoute, validateBackup, makeBackup, mergeBackup, validDate, GRADES, COLORS, summarizeImport } from '../docs/model.js';
+import { counts, completeProject, validateLog, validateRoute, validateBackup, makeBackup, mergeBackup, validDate, GRADES, COLORS, LEGACY_COLORS, summarizeImport } from '../docs/model.js';
 const photo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a6WQAAAAASUVORK5CYII=';
 const route = () => ({ id: 'route-1', scene: 'gym', place: '测试岩馆', area: '', grade: '5.11a', feature: '大碗造型', color: 'blue', length: 15, setter: '', photos: [photo], target: 'lead', projectStatus: 'active' });
 const log = (overrides = {}) => ({ id: 'log-1', routeId: 'route-1', date: '2026-10-29', createdAt: 1, updatedAt: 1, method: 'lead', result: 'attempt', style: '', feel: '偏难', belayer: '测试保护员', notes: '练习中', ...overrides });
@@ -76,21 +76,15 @@ test('Pink Line 可保存并随旧颜色记录一起备份和导入', () => {
   assert.deepEqual(mergeBackup({ routes: [], logs: [] }, restored), data);
 });
 
-test('所有线路颜色在卡片和表单背景上达到 4.5:1 对比度', () => {
-  const luminance = hex => {
-    const rgb = hex.slice(1).match(/../g).map(value => parseInt(value, 16) / 255);
-    const linear = rgb.map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
-    return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
-  };
-  for (const [label, color] of Object.values(COLORS)) {
-    for (const background of ['#ffffff', '#ededed']) {
-      const ratio = (luminance(background) + 0.05) / (luminance(color) + 0.05);
-      assert.ok(ratio >= 4.5, `${label} on ${background}: ${ratio}`);
-    }
-  }
+test('当前颜色采用用户截图色值，保留 Black Line 名称且不再提供 Tiffany Blue', () => {
+  assert.deepEqual(Object.fromEntries(Object.entries(COLORS).map(([key, value]) => [key, value[1]])), {
+    red: '#FF0000', orange: '#FF5722', yellow: '#FDD835', green: '#4CAF50', cyan: '#00E5FF', blue: '#2196F3', purple: '#9C27B0', black: '#000000', white: '#FFFFFF', ochre: '#CC7722', pink: '#EC407A',
+  });
+  assert.equal(COLORS.black[0], 'Black Line');
+  assert.equal(COLORS.tiffany, undefined);
 });
 test('所有线路颜色的备份往返保留原颜色标识', () => {
-  const routes = Object.keys(COLORS).map(color => validateRoute({ ...route(), id: `route-${color}`, color }));
+  const routes = Object.keys({ ...COLORS, ...LEGACY_COLORS }).map(color => validateRoute({ ...route(), id: `route-${color}`, color }));
   const logs = routes.map(item => log({ id: `log-${item.color}`, routeId: item.id }));
   const restored = validateBackup(JSON.parse(JSON.stringify(makeBackup(routes, logs))));
   assert.deepEqual(restored, { routes, logs });

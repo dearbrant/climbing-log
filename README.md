@@ -47,3 +47,7 @@ Service Worker 需要 HTTPS 或本机 localhost。手机通过局域网 HTTP 地
 标题和难度数字使用 LogoSC Unbounded Sans，其他英文界面文字使用 Google Sans Flex。网页自托管拉丁字符 WOFF2 文件，中文回退至设备系统字体。两款字体均采用 SIL Open Font License 1.1，授权文件位于 `docs/fonts/`。
 
 界面使用用户提供的 Solar SVG 图标文件，存放在 `docs/icons/`。来源与授权署名见 `docs/ICON_CREDITS.md`。
+
+## 样式与历史颜色
+
+Data Sync 图案左右各留 24px，宽度随屏幕调整，高度保持原始比例。详情表单每次打开后从页面顶部展示。线路颜色采用用户 2026-11-09 提供的色值，Black Line 名称不变；White Line 使用深色标签底和选择框底。新建不再提供 Tiffany Blue，旧记录与备份仍保留原标识，编辑旧 Tiffany 记录时允许保留原值，不批量改写。

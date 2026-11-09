@@ -1,4 +1,4 @@
-import { METHODS, COLORS, GRADES, today, validateRoute, validateLog, validateBackup, makeBackup, summarizeImport } from './model.js?v=20261109-sync-feedback';
+import { METHODS, COLORS, LEGACY_COLORS, GRADES, today, validateRoute, validateLog, validateBackup, makeBackup, summarizeImport } from './model.js?v=20261109-palette-scroll';
 import { readAll, write } from './storage.js?v=20261030-detail-edit';
 import { icon } from './icons.js?v=20261030-feeling-dialog';
 
@@ -28,7 +28,10 @@ const updatedAt = log => log.updatedAt ?? log.createdAt;
 const dateLabel = date => { const day = new Date(`${date}T12:00:00`); return `${day.getMonth() + 1}/${day.getDate()}/${day.getFullYear()}`; };
 const weekday = date => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(`${date}T12:00:00`).getDay()];
 const latest = logs => [...logs].sort((a, b) => updatedAt(b) - updatedAt(a) || b.createdAt - a.createdAt || b.id.localeCompare(a.id));
-const colorTag = route => route.color && COLORS[route.color] ? `<span class="tag" style="color:${COLORS[route.color][1]}">${COLORS[route.color][0]}</span>` : '';
+const colorTag = route => {
+  const color = COLORS[route.color] || LEGACY_COLORS[route.color];
+  return color ? `<span class="tag${route.color === 'white' ? ' white-line' : ''}" style="color:${color[1]}">${color[0]}</span>` : '';
+};
 const resultTag = log => `<span class="tag result-${log.result === 'attempt' ? 'attempt' : log.style}">${log.result === 'attempt' ? 'Attempt' : results[log.style] || 'Send'}</span>`;
 const tags = (log, route, projectAction = false) => `${resultTag(log)}${route.projectStatus ? projectAction ? '<button class="tag project project-link" data-action="projects">Project</button>' : '<span class="tag project">Project</span>' : ''}${log.feel ? `<span class="tag">${escapeHtml(feelLabel[log.feel] || log.feel)}</span>` : ''}<span class="tag">${METHODS[log.method]}</span>${colorTag(route)}<span class="tag">${escapeHtml(route.place)}</span><span class="tag">${dateLabel(log.date)} ${weekday(log.date)}</span>`;
 const header = (title, action = 'navigate') => `<header class="screen-head single"><h1>${title}</h1><button class="icon-button" data-action="${action}" data-to="#home" aria-label="Close">${icon('close')}</button></header>`;
@@ -53,7 +56,7 @@ function renderForm(id) {
   const currentResult = log?.result === 'attempt' ? 'attempt' : Object.keys(results).includes(log?.style) ? log.style : 'redpoint';
   const outcomeOptions = Object.entries(results);
   const currentColor = route?.color || 'black';
-  const colorOptions = Object.entries(COLORS).map(([value, [text]]) => [value, text]);
+  const colorOptions = Object.entries({ ...COLORS, ...(LEGACY_COLORS[currentColor] ? { [currentColor]: LEGACY_COLORS[currentColor] } : {}) }).map(([value, [text]]) => [value, text]);
   const places = route?.place && !gyms.includes(route.place) ? [route.place, ...gyms] : gyms;
   const dialogs = (id ? `<dialog class="confirm-dialog" id="delete-confirm" aria-labelledby="delete-confirm-title"><h2 id="delete-confirm-title">Delete this climb?</h2><p>This cannot be undone.</p><div class="confirm-actions"><button type="button" data-action="cancel-delete">Cancel</button><button type="button" data-action="confirm-delete" data-id="${escapeHtml(id)}">Delete Climb</button></div></dialog>` : '') + `<dialog class="confirm-dialog" id="discard-confirm" aria-labelledby="discard-confirm-title"><h2 id="discard-confirm-title">Discard changes?</h2><p>Your edits won't be saved.</p><div class="confirm-actions"><button type="button" data-action="discard-changes">Discard</button><button type="button" data-action="keep-editing" autofocus>Keep Editing</button></div></dialog>`;
   app.innerHTML = `<div class="app">${header(id ? 'CLIMB<br>DETAIL' : 'LOG<br>A CLIMB', 'close-detail')}<form id="climb-form" class="form" data-id="${escapeHtml(id || '')}">
@@ -72,8 +75,9 @@ function renderForm(id) {
   initialFormData = formValues(app.querySelector('#climb-form'));
   restoreDraft();
   updateColor();
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 }
-function updateColor() { const select = app.querySelector('[name="color"]'); if (select) select.style.color = COLORS[select.value]?.[1] || '#111'; }
+function updateColor() { const select = app.querySelector('[name="color"]'); if (select) { select.style.color = (COLORS[select.value] || LEGACY_COLORS[select.value])?.[1] || '#111'; select.style.backgroundColor = select.value === 'white' ? '#222222' : ''; } }
 function renderProjects() {
   const seen = new Set();
   const logs = latest(state.logs.filter(log => routeFor(log)?.projectStatus)).filter(log => { if (seen.has(log.routeId)) return false; seen.add(log.routeId); return true; });

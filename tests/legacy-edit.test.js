@@ -33,10 +33,11 @@ async function editor(routeValue = route, logValue = log, isNew = false, drafts 
       return form.fields.color;
     },
   };
+  const viewport = { scrollY: 0, addEventListener() {}, scrollTo({ top }) { this.scrollY = top; } };
   const toast = { classList: { add() {}, remove() {} } };
   const deps = { ...model, icon: () => '', crypto: webcrypto,
     document: { querySelector: selector => selector === '#app' ? app : toast },
-    window: { addEventListener() {} }, location: { hash: isNew ? '#new' : `#detail/${logValue.id}` }, navigator: {},
+    window: viewport, location: { hash: isNew ? '#new' : `#detail/${logValue.id}` }, navigator: {},
     clearTimeout() {}, setTimeout() {},
     sessionStorage: { getItem: key => drafts.get(key) || null, setItem: (key, value) => drafts.set(key, value), removeItem: key => drafts.delete(key) },
     FormData: class {
@@ -50,7 +51,7 @@ async function editor(routeValue = route, logValue = log, isNew = false, drafts 
   const api = await new AsyncFunction(...Object.keys(deps), `${source}\nreturn { renderForm, saveForm, hasUnsavedChanges, rememberDraft, navigate };`)(...Object.values(deps));
   api.renderForm(isNew ? undefined : logValue.id);
   return {
-    api, drafts, dialog,
+    api, drafts, dialog, viewport,
     click: action => listeners.get('click')({ target: { closest: () => ({ dataset: { action } }) } }),
     get form() { return form; },
     get data() { return data; },
@@ -156,4 +157,24 @@ test('刷新恢复会话草稿，保存成功清理草稿，不改变新增默�
   assert.equal(restored.drafts.size, 0);
   const fresh = await editor(route, log, true, page.drafts);
   assert.equal(fresh.form.fields.color.value, 'black');
+});
+
+test('从滚动后的首页进入详情时从顶部完整展示', async () => {
+  const page = await editor();
+  page.api.navigate('#home');
+  page.viewport.scrollY = 844;
+  page.api.navigate('#detail/old-log');
+  assert.equal(page.viewport.scrollY, 0);
+  assert.equal(page.form.fields.color.value, 'black');
+});
+
+test('新建不提供 Tiffany，编辑既有 Tiffany 时保留原色且备份兼容', async () => {
+  const fresh = await editor(route, log, true);
+  assert.equal(fresh.form.fields.color.options.includes('tiffany'), false);
+  const legacy = await editor({ ...route, color: 'tiffany' });
+  assert.equal(legacy.form.fields.color.value, 'tiffany');
+  assert.equal(legacy.form.fields.color.options.includes('tiffany'), true);
+  await legacy.save();
+  assert.equal(legacy.data.routes[0].color, 'tiffany');
+  assert.deepEqual(model.validateBackup(model.makeBackup(legacy.data.routes, legacy.data.logs)), legacy.data);
 });

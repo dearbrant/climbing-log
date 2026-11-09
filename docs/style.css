@@ -48,9 +48,12 @@
 .home .fab img{width:72px;height:72px}
 .home-settings,.home-settings img{display:block;width:48px;height:48px}
 .home-settings{flex:none;background:transparent;padding:0}
-.sync-art{display:block;width:min(342px,100%);height:auto;margin:35px auto 0}
+.sync-page{max-width:none}
+.sync-art{display:block;width:100%;height:auto;margin:35px auto 0}
 .sync-actions{display:grid;gap:8px;margin-top:36px}
 .sync-actions button{height:56px;border-radius:16px;background:#000;color:#fff;font-size:20px;font-weight:600}
 .sync-file-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 
 .sync-info{font-size:14px;line-height:21px;color:#555;margin:16px 0}#import-confirm{max-height:calc(100dvh - 48px);overflow:auto}
+
+.tag.white-line{background:#222222}

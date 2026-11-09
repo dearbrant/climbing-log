@@ -1,13 +1,15 @@
 export const METHODS = { auto: 'Auto Belay', toprope: 'Top Rope', lead: 'Lead' };
 export const SCENES = { gym: '岩馆', outdoor: '野外' };
-export const COLORS = { red: ['Red Line', '#c42b12'], orange: ['Orange Line', '#a45100'], yellow: ['Yellow Line', '#806400'], green: ['Green Line', '#007a00'], cyan: ['Cyan Line', '#00727d'], blue: ['Blue Line', '#173bd0'], purple: ['Purple Line', '#800080'], pink: ['Pink Line', '#c21875'], black: ['Black Line', '#222222'], white: ['White Line', '#666666'], ochre: ['Ochre Line', '#905a1c'], tiffany: ['Tiffany Blue Line', '#08736f'] };
+export const COLORS = { red: ['Red Line', '#FF0000'], orange: ['Orange Line', '#FF5722'], yellow: ['Yellow Line', '#FDD835'], green: ['Green Line', '#4CAF50'], cyan: ['Cyan Line', '#00E5FF'], blue: ['Blue Line', '#2196F3'], purple: ['Purple Line', '#9C27B0'], black: ['Black Line', '#000000'], white: ['White Line', '#FFFFFF'], ochre: ['Ochre Line', '#CC7722'], pink: ['Pink Line', '#EC407A'] };
+// Kept only for existing records and backups; not offered for new climbs.
+export const LEGACY_COLORS = { tiffany: ['Tiffany Blue Line', '#08736f'] };
 export const STYLES = { lead: { onsight: 'Onsight', flash: 'Flash', redpoint: 'Redpoint', repeat: 'Repeat 重复完攀' }, toprope: { first: '首次无坠落完成', clean: '练习后无坠落完成', repeat: '重复完成' }, auto: { first: '首次无坠落完成', clean: '练习后无坠落完成', repeat: '重复完成' } };
 export const PROJECTS = { active: '进行中', complete: '已完成', stopped: '已停止' };
 export const FEELS = ['Easy', 'Moderate', 'Hard', 'Very Hard', '简单', '中等', '偏难', '很硬'];
 export const GRADES = Array.from({ length: 6 }, (_, i) => ['a', 'ab', 'b', 'bc', 'c', 'cd', 'd'].map(suffix => `5.${i + 10}${suffix}`)).flat();
 const LEGACY_GRADES = ['未知', ...Array.from({ length: 10 }, (_, i) => `5.${i}`), '5.9+', ...Array.from({ length: 6 }, (_, i) => [`5.${i + 10}`, `5.${i + 10}-`, `5.${i + 10}+`]).flat()];
 export const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-export const routeTitle = r => r.feature || (r.color ? COLORS[r.color][0] : '未命名线路');
+export const routeTitle = r => r.feature || (r.color ? (COLORS[r.color] || LEGACY_COLORS[r.color])[0] : '未命名线路');
 export function counts(logs, routeId, method) {
   const rows = logs.filter(l => (!routeId || l.routeId === routeId) && (!method || l.method === method));
   return { total: rows.length, sends: rows.filter(l => l.result === 'send').length };
@@ -26,7 +28,7 @@ export function validDate(v) {
 }
 export function validateRoute(r) {
   if (!r || typeof r !== 'object') fail('Route data is invalid.');
-  const result = { id: id(r.id), scene: choice(r.scene, Object.keys(SCENES), 'Climbing scene'), place: text(r.place, 100, 'Location', true), area: text(r.area, 100, 'Climbing area'), grade: choice(r.grade, [...GRADES, ...LEGACY_GRADES], 'Grade'), feature: text(r.feature, 150, 'Route feature'), color: choice(r.color, ['', ...Object.keys(COLORS)], 'Line color'), length: r.length, setter: text(r.setter, 100, 'Route setter'), target: choice(r.target, Object.keys(METHODS), 'Target climbing style'), projectStatus: choice(r.projectStatus, ['', ...Object.keys(PROJECTS)], 'Project status') };
+  const result = { id: id(r.id), scene: choice(r.scene, Object.keys(SCENES), 'Climbing scene'), place: text(r.place, 100, 'Location', true), area: text(r.area, 100, 'Climbing area'), grade: choice(r.grade, [...GRADES, ...LEGACY_GRADES], 'Grade'), feature: text(r.feature, 150, 'Route feature'), color: choice(r.color, ['', ...Object.keys(COLORS), ...Object.keys(LEGACY_COLORS)], 'Line color'), length: r.length, setter: text(r.setter, 100, 'Route setter'), target: choice(r.target, Object.keys(METHODS), 'Target climbing style'), projectStatus: choice(r.projectStatus, ['', ...Object.keys(PROJECTS)], 'Project status') };
   if (r.length !== null && (typeof r.length !== 'number' || !Number.isFinite(r.length) || r.length <= 0 || r.length > 10000)) fail('Route length is invalid.');
   if (!Array.isArray(r.photos) || r.photos.length > 4) fail('Add no more than 4 route photos.');
   result.photos = r.photos.map(p => {
