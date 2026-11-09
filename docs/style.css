@@ -9,7 +9,7 @@
 .field.no-icon input{padding:0 16px}
 .field select{padding:0 14px 0 42px}
 .field .field-icon{top:15px}
-.delete-button{background:#ededed;color:rgba(0,0,0,.2);margin-top:0}
+.delete-button{background:transparent;color:rgba(0,0,0,.2);margin-top:0}
 .home{padding-left:24px;padding-right:24px}
 .home .date-group{margin-bottom:16px}
 .home .date-group h2{margin:0}
@@ -38,10 +38,10 @@
 .confirm-dialog{width:min(360px,calc(100% - 40px));border:0;border-radius:24px;padding:24px;background:#f5f5f5;color:#080808;box-shadow:0 20px 60px #0003}
 .confirm-dialog::backdrop{background:#0006}
 .confirm-dialog h2{margin:0;font-size:24px;line-height:30px}
-.confirm-dialog p{margin:8px 0 24px;font-size:16px;line-height:24px}
+.confirm-dialog p{margin:8px 0 16px;font-size:16px;line-height:24px}
 .confirm-actions{display:flex;gap:8px}
 .confirm-actions button{flex:1;min-height:48px;border-radius:14px;background:#ededed;color:#000;font-size:16px;font-weight:600}
-.confirm-actions [data-action=confirm-delete],.confirm-actions [data-action=keep-editing]{background:#000;color:#fff}
+.confirm-actions [data-action=confirm-delete],.confirm-actions [data-action=confirm-import],.confirm-actions [data-action=discard-changes]{background:#000;color:#fff}
 .home-empty-art{position:absolute;top:48.5%;left:50%;width:min(342px,calc(100% - 48px));height:auto;transform:translate(-50%,-50%);pointer-events:none}
 .home-main .screen-head h1{font-size:36px;line-height:36px;letter-spacing:0}
 .home .fab{left:calc(50% + min(210px,50vw) - 92px);bottom:max(36px,env(safe-area-inset-bottom));width:72px;height:72px}
@@ -58,5 +58,5 @@
 
 .tag.white-line{background:#222222}
 
-#import-confirm p{margin:8px 0 12px}
+#import-confirm p{margin:8px 0 16px}
 #import-confirm #import-error:empty{display:none}

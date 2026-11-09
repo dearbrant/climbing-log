@@ -1,4 +1,4 @@
-import { METHODS, COLORS, LEGACY_COLORS, GRADES, today, validateRoute, validateLog, validateBackup, makeBackup, summarizeImport } from './model.js?v=20261109-import-spacing';
+import { METHODS, COLORS, LEGACY_COLORS, GRADES, today, validateRoute, validateLog, validateBackup, makeBackup, summarizeImport } from './model.js?v=20261109-dialog-actions';
 import { readAll, write } from './storage.js?v=20261030-detail-edit';
 import { icon } from './icons.js?v=20261030-feeling-dialog';
 
@@ -41,7 +41,7 @@ function renderHome() {
   const grouped = new Map();
   for (const log of state.logs) if (routeFor(log)) { if (!grouped.has(log.date)) grouped.set(log.date, []); grouped.get(log.date).push(log); }
   const dates = [...grouped.keys()].sort((a, b) => b.localeCompare(a));
-  app.innerHTML = `<div class="app home home-main${dates.length ? '' : ' home-empty'}"><header class="screen-head"><h1>CLIMBING<br>LOG</h1><button class="home-settings" data-action="navigate" data-to="#sync" aria-label="Data Sync">${icon('setting')}</button></header>${dates.length ? dates.map(date => `<section class="date-group"><h2 class="date-row"><span>${dateLabel(date)}</span><span class="weekday">${weekday(date)}</span></h2><div class="cards">${latest(grouped.get(date)).map(log => card(log)).join('')}</div></section>`).join('') : '<img class="home-empty-art" src="./icons/ic_empty.svg" alt="">'}<button class="fab" data-action="navigate" data-to="#new" aria-label="新增攀爬记录">${icon('add')}</button></div>`;
+  app.innerHTML = `<div class="app home home-main${dates.length ? '' : ' home-empty'}"><header class="screen-head"><h1>CLIMBING<br>LOGBOOK</h1><button class="home-settings" data-action="navigate" data-to="#sync" aria-label="Data Sync">${icon('setting')}</button></header>${dates.length ? dates.map(date => `<section class="date-group"><h2 class="date-row"><span>${dateLabel(date)}</span><span class="weekday">${weekday(date)}</span></h2><div class="cards">${latest(grouped.get(date)).map(log => card(log)).join('')}</div></section>`).join('') : '<img class="home-empty-art" src="./icons/ic_empty.svg" alt="">'}<button class="fab" data-action="navigate" data-to="#new" aria-label="新增攀爬记录">${icon('add')}</button></div>`;
 }
 const option = (value, label, selected) => `<option value="${escapeHtml(value)}" ${value === selected ? 'selected' : ''}>${escapeHtml(label)}</option>`;
 const selectField = (name, label, iconName, choices, selected) => `<label class="field"><b class="field-icon" aria-hidden="true">${icon(iconName)}</b><select name="${name}" required aria-label="${label}">${choices.map(([value, text]) => option(value, text, selected)).join('')}</select></label>`;
@@ -58,7 +58,7 @@ function renderForm(id) {
   const currentColor = route?.color || 'black';
   const colorOptions = Object.entries({ ...COLORS, ...(LEGACY_COLORS[currentColor] ? { [currentColor]: LEGACY_COLORS[currentColor] } : {}) }).map(([value, [text]]) => [value, text]);
   const places = route?.place && !gyms.includes(route.place) ? [route.place, ...gyms] : gyms;
-  const dialogs = (id ? `<dialog class="confirm-dialog" id="delete-confirm" aria-labelledby="delete-confirm-title"><h2 id="delete-confirm-title">Delete this climb?</h2><p>This cannot be undone.</p><div class="confirm-actions"><button type="button" data-action="cancel-delete">Cancel</button><button type="button" data-action="confirm-delete" data-id="${escapeHtml(id)}">Delete Climb</button></div></dialog>` : '') + `<dialog class="confirm-dialog" id="discard-confirm" aria-labelledby="discard-confirm-title"><h2 id="discard-confirm-title">Discard changes?</h2><p>Your edits won't be saved.</p><div class="confirm-actions"><button type="button" data-action="discard-changes">Discard</button><button type="button" data-action="keep-editing" autofocus>Keep Editing</button></div></dialog>`;
+  const dialogs = (id ? `<dialog class="confirm-dialog" id="delete-confirm" aria-labelledby="delete-confirm-title"><h2 id="delete-confirm-title">Delete this climb?</h2><p>This cannot be undone.</p><div class="confirm-actions"><button type="button" data-action="confirm-delete" data-id="${escapeHtml(id)}">Delete Climb</button><button type="button" data-action="cancel-delete" autofocus>Cancel</button></div></dialog>` : '') + `<dialog class="confirm-dialog" id="discard-confirm" aria-labelledby="discard-confirm-title"><h2 id="discard-confirm-title">Discard changes?</h2><p>Your edits won't be saved.</p><div class="confirm-actions"><button type="button" data-action="discard-changes">Discard</button><button type="button" data-action="keep-editing" autofocus>Keep Editing</button></div></dialog>`;
   app.innerHTML = `<div class="app">${header(id ? 'CLIMB<br>DETAIL' : 'LOG<br>A CLIMB', 'close-detail')}<form id="climb-form" class="form" data-id="${escapeHtml(id || '')}">
     ${dateField(log?.date || today())}
     ${selectField('place', 'Climbing Gym', 'place', places.map(value => [value, value]), route?.place || 'Mellow')}
@@ -81,7 +81,7 @@ function updateColor() { const select = app.querySelector('[name="color"]'); if 
 function renderProjects() {
   const seen = new Set();
   const logs = latest(state.logs.filter(log => routeFor(log)?.projectStatus)).filter(log => { if (seen.has(log.routeId)) return false; seen.add(log.routeId); return true; });
-  app.innerHTML = `<div class="app home">${header('PROJECT')}${logs.length ? `<div class="project-list">${logs.map(log => card(log, false)).join('')}</div>` : '<p class="empty">No routes marked as Projects yet.</p>'}<button class="fab" data-action="navigate" data-to="#new" aria-label="新增攀爬记录">${icon('add')}</button></div>`;
+  app.innerHTML = `<div class="app home">${header('CLIMB<br>PROJECTS')}${logs.length ? `<div class="project-list">${logs.map(log => card(log, false)).join('')}</div>` : '<p class="empty">No routes marked as Projects yet.</p>'}<button class="fab" data-action="navigate" data-to="#new" aria-label="新增攀爬记录">${icon('add')}</button></div>`;
 }
 function syncStatus(message) {
   syncMessage = message;
@@ -98,7 +98,7 @@ async function refreshSyncInfo() {
 }
 function renderSync() {
   pendingBackup = null;
-  app.innerHTML = `<div class="app sync-page">${header('DATA<br>SYNC')}<img class="sync-art" src="./icons/ic_datasync.svg" alt=""><div class="sync-actions"><button type="button" data-action="import-backup">Import Backup</button><button type="button" data-action="export-data">Export Data</button><input class="sync-file-input" id="backup-file" type="file" accept=".json,application/json" tabindex="-1"></div><p class="sync-info" id="sync-info">Loading local records…</p><p class="sync-info" id="sync-feedback" role="status">${escapeHtml(syncMessage)}</p><dialog class="confirm-dialog" id="import-confirm" aria-labelledby="import-title"><h2 id="import-title">Import backup?</h2><p id="import-summary"></p><p>Matching IDs keep local records, including local edits. New climbs may use existing local route details.</p><p id="import-error" class="error" role="alert"></p><div class="confirm-actions"><button type="button" data-action="cancel-import">Cancel</button><button type="button" data-action="confirm-import">Import</button></div></dialog></div>`;
+  app.innerHTML = `<div class="app sync-page">${header('DATA<br>SYNC')}<img class="sync-art" src="./icons/ic_datasync.svg" alt=""><div class="sync-actions"><button type="button" data-action="import-backup">Import Backup</button><button type="button" data-action="export-data">Export Data</button><input class="sync-file-input" id="backup-file" type="file" accept=".json,application/json" tabindex="-1"></div><p class="sync-info" id="sync-info">Loading local records…</p><p class="sync-info" id="sync-feedback" role="status">${escapeHtml(syncMessage)}</p><dialog class="confirm-dialog" id="import-confirm" aria-labelledby="import-title"><h2 id="import-title">Import backup?</h2><p id="import-summary"></p><p>Matching IDs keep local records, including local edits. New climbs may use existing local route details.</p><p id="import-error" class="error" role="alert"></p><div class="confirm-actions"><button type="button" data-action="confirm-import">Import</button><button type="button" data-action="cancel-import" autofocus>Cancel</button></div></dialog></div>`;
   refreshSyncInfo();
 }
 const formValues = form => JSON.stringify([...new FormData(form)]);
